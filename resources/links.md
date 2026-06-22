@@ -7,6 +7,10 @@ Curated, not exhaustive — links I've actually found useful.
 - Python official docs & tutorial
 - Pro Git book (free online) — the chapters on branching and rebasing
 - PostgreSQL docs — especially the section on EXPLAIN
+- TypeScript Handbook — narrowing and the utility types
+- A Tour of Go — the official interactive intro
+- OpenTelemetry docs — the vendor-neutral observability standard
+- MDN HTTP reference — methods, status codes, and caching headers
 
 ## Practice
 - Exercism — guided exercises with mentor feedback
