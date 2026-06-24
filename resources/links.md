@@ -11,11 +11,16 @@ Curated, not exhaustive — links I've actually found useful.
 - A Tour of Go — the official interactive intro
 - OpenTelemetry docs — the vendor-neutral observability standard
 - MDN HTTP reference — methods, status codes, and caching headers
+- Kubernetes docs — the Concepts section, not just the reference
+- regex101.com — live regex tester with an explanation pane
+- GNU Make manual — automatic variables and pattern rules
+- OWASP Cheat Sheet Series — practical, per-topic security guidance
 
 ## Practice
 - Exercism — guided exercises with mentor feedback
 - LeetCode / HackerRank — data structures & algorithms drills
 - "Build your own X" lists — reimplement tools to understand them
+- The wordcount CLI in this repo — my own "build your own wc"
 
 ## Reading
 - "The Pragmatic Programmer" — habits over hype
