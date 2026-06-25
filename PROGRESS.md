@@ -2,6 +2,24 @@
 
 A running journal — newest first. One short entry per session.
 
+## 2026-06-25
+- Knocked out the "real CI pipeline" goal: `.github/workflows/ci.yml` runs
+  lint → test → build, staged with `needs` so a red lint blocks the rest, with
+  Go module caching keyed on `go.sum`. Added a Makefile and a golangci-lint
+  config so local and CI runs can't drift.
+- Gave wordcount a `-serve` mode — an HTTP service with a `/healthz` probe and a
+  JSON `/count` endpoint, plus graceful SIGTERM shutdown via
+  `signal.NotifyContext`. Wrote a k8s Deployment/Service that wires `/healthz`
+  to liveness + readiness probes.
+- Notes: GitHub Actions, YAML (the Norway problem bit me — `1.20` parsed as
+  1.2), health checks, Go JSON, and semantic versioning.
+- What clicked: liveness vs readiness is about the *action* on failure — restart
+  vs pull-from-LB. Using a dependency check as liveness turns a blip into a
+  restart storm. Also: struct fields must be exported for `encoding/json` to see
+  them, which is why `counts` went uppercase.
+- Goal for next time: actually apply `deploy/k8s.yaml` on a local kind cluster
+  and watch the readiness probe gate traffic through a rollout.
+
 ## 2026-06-24
 - Hit both "next up" goals: built `projects/wordcount`, a small `wc` clone in Go
   (flag parsing, stdin/file streaming, table-driven tests), then containerized it
