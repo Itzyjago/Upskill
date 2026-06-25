@@ -1,0 +1,21 @@
+# golangci-lint config for wordcount — a small, opinionated linter set.
+# Run locally with `make lint`; CI runs the same thing.
+run:
+  timeout: 2m
+
+linters:
+  enable:
+    - errcheck      # unchecked errors are the #1 Go footgun
+    - govet         # suspicious constructs
+    - staticcheck   # the big one — correctness + simplifications
+    - ineffassign   # assignments that are never used
+    - unused        # dead code
+    - gofmt         # formatting
+    - goimports     # import grouping/ordering
+    - misspell      # typos in comments and strings
+    - revive        # style, replaces the old golint
+
+issues:
+  # Be strict on a learning project — surface everything.
+  max-issues-per-linter: 0
+  max-same-issues: 0
