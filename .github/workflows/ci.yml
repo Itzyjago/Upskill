@@ -1,0 +1,53 @@
+# CI for the wordcount project — the roadmap "real pipeline" goal.
+# lint → test → build, cheapest job first so failures surface fast.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths: ["projects/wordcount/**", ".github/workflows/ci.yml"]
+  pull_request:
+    paths: ["projects/wordcount/**", ".github/workflows/ci.yml"]
+
+defaults:
+  run:
+    working-directory: projects/wordcount
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: projects/wordcount/go.mod
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: projects/wordcount
+
+  test:
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: projects/wordcount/go.mod
+      - run: go test -race -cover ./...
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache-dependency-path: projects/wordcount/go.mod
+      - run: go build -o bin/wc .
+      - name: Smoke test the binary
+        run: echo "hello world" | ./bin/wc
