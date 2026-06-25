@@ -24,9 +24,9 @@ func TestCount(t *testing.T) {
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if c.lines != tt.lines || c.words != tt.words || c.bytes != tt.bytes {
+			if c.Lines != tt.lines || c.Words != tt.words || c.Bytes != tt.bytes {
 				t.Errorf("got {l:%d w:%d c:%d}, want {l:%d w:%d c:%d}",
-					c.lines, c.words, c.bytes, tt.lines, tt.words, tt.bytes)
+					c.Lines, c.Words, c.Bytes, tt.lines, tt.words, tt.bytes)
 			}
 		})
 	}

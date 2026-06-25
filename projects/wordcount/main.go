@@ -3,6 +3,7 @@
 // Usage:
 //
 //	wc [-l] [-w] [-c] [file...]   # reads stdin when no files given
+//	wc -serve :8080              # run as an HTTP service (POST body to /count)
 //
 // Flags mirror Unix wc: -l lines, -w words, -c bytes. With no flag, prints all.
 package main
@@ -16,7 +17,9 @@ import (
 )
 
 type counts struct {
-	lines, words, bytes int
+	Lines int `json:"lines"`
+	Words int `json:"words"`
+	Bytes int `json:"bytes"`
 }
 
 // count scans r and tallies lines, words, and bytes in a single pass.
@@ -32,25 +35,35 @@ func count(r io.Reader) (counts, error) {
 		if err != nil {
 			return c, err
 		}
-		c.bytes++
+		c.Bytes++
 		if b == '\n' {
-			c.lines++
+			c.Lines++
 		}
 		if b == ' ' || b == '\t' || b == '\n' || b == '\r' {
 			inWord = false
 		} else if !inWord {
 			inWord = true
-			c.words++
+			c.Words++
 		}
 	}
 }
 
 func main() {
 	var showL, showW, showC bool
+	var serveAddr string
 	flag.BoolVar(&showL, "l", false, "count lines")
 	flag.BoolVar(&showW, "w", false, "count words")
 	flag.BoolVar(&showC, "c", false, "count bytes")
+	flag.StringVar(&serveAddr, "serve", "", "run as an HTTP service on this address (e.g. :8080)")
 	flag.Parse()
+
+	if serveAddr != "" {
+		if err := serve(serveAddr); err != nil {
+			fmt.Fprintln(os.Stderr, "wc:", err)
+			os.Exit(1)
+		}
+		return
+	}
 
 	// No selector flags → show everything, like real wc.
 	if !showL && !showW && !showC {
@@ -59,13 +72,13 @@ func main() {
 
 	print := func(name string, c counts) {
 		if showL {
-			fmt.Printf("%8d", c.lines)
+			fmt.Printf("%8d", c.Lines)
 		}
 		if showW {
-			fmt.Printf("%8d", c.words)
+			fmt.Printf("%8d", c.Words)
 		}
 		if showC {
-			fmt.Printf("%8d", c.bytes)
+			fmt.Printf("%8d", c.Bytes)
 		}
 		if name != "" {
 			fmt.Printf(" %s", name)
@@ -101,9 +114,9 @@ func main() {
 			continue
 		}
 		print(name, c)
-		total.lines += c.lines
-		total.words += c.words
-		total.bytes += c.bytes
+		total.Lines += c.Lines
+		total.Words += c.Words
+		total.Bytes += c.Bytes
 	}
 	if len(files) > 1 {
 		print("total", total)
