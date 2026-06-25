@@ -1,0 +1,68 @@
+# Kubernetes manifest for wordcount's serve mode — roadmap #4 (deploy + probe).
+# Apply with: kubectl apply -f deploy/k8s.yaml
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wordcount
+  labels:
+    app: wordcount
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wordcount
+  template:
+    metadata:
+      labels:
+        app: wordcount
+    spec:
+      containers:
+        - name: wordcount
+          image: wordcount:latest
+          args: ["-serve", ":8080"]
+          ports:
+            - containerPort: 8080
+          # Liveness: cheap, local — only restart if the process is wedged.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 10
+            failureThreshold: 3
+          # Readiness: same endpoint here, but its job is to gate traffic, not
+          # restart. Kept dependency-light on purpose.
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 2
+            periodSeconds: 5
+            failureThreshold: 3
+            timeoutSeconds: 1
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wordcount
+spec:
+  selector:
+    app: wordcount
+  ports:
+    - port: 80
+      targetPort: 8080
