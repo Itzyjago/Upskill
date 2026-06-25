@@ -1,0 +1,8 @@
+# Keep the build context tiny — the multi-stage build only needs source + go.mod.
+bin/
+*.test
+*.out
+README.md
+Makefile
+.golangci.yml
+.dockerignore
