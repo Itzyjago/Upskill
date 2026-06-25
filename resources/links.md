@@ -15,6 +15,10 @@ Curated, not exhaustive — links I've actually found useful.
 - regex101.com — live regex tester with an explanation pane
 - GNU Make manual — automatic variables and pattern rules
 - OWASP Cheat Sheet Series — practical, per-topic security guidance
+- GitHub Actions docs — workflow syntax, contexts, and the events reference
+- Kubernetes "Configure Liveness, Readiness and Startup Probes" task page
+- Semantic Versioning 2.0.0 (semver.org) — the spec, it's short
+- The official YAML 1.2 spec + "Learn YAML in Y minutes" for the quick version
 
 ## Practice
 - Exercism — guided exercises with mentor feedback
