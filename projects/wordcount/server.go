@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -49,6 +50,9 @@ func countHandler(w http.ResponseWriter, r *http.Request) {
 // serve runs the HTTP service until SIGINT/SIGTERM, then drains in-flight
 // requests with a bounded grace period (the readiness-probe lesson).
 func serve(addr string) error {
+	// JSON logs to stdout — structured and machine-parseable, the standard for
+	// containerized services where stdout is the log stream.
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	m := newMetrics()
 	srv := &http.Server{
 		Addr:              addr,

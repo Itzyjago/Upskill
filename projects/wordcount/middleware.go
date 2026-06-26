@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log/slog"
 	"net/http"
 	"strconv"
 	"time"
@@ -32,6 +33,15 @@ func (m *metrics) instrument(path string, next http.HandlerFunc) http.HandlerFun
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next(rec, r)
 
-		m.observe(r.Method, path, strconv.Itoa(rec.status), time.Since(start).Seconds())
+		dur := time.Since(start)
+		m.observe(r.Method, path, strconv.Itoa(rec.status), dur.Seconds())
+		// One structured line per request — the same dimensions the metrics use,
+		// but keyed for grepping/log aggregation (see notes/structured-logging.md).
+		slog.Info("request",
+			"method", r.Method,
+			"path", path,
+			"status", rec.status,
+			"dur_ms", dur.Milliseconds(),
+		)
 	}
 }
