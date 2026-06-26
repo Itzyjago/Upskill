@@ -1,0 +1,14 @@
+# kind cluster config for running wordcount locally — roadmap #5.
+# Create with: kind create cluster --name upskill --config deploy/kind.yaml
+#
+# One control-plane node is plenty for a probe/rollout demo. The extraPortMapping
+# lets the host reach a NodePort directly, as an alternative to `kubectl
+# port-forward` (handy for leaving curl running in a loop during a rollout).
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080   # NodePort exposed by the Service (see k8s.yaml)
+        hostPort: 8080         # curl localhost:8080 from the host
+        protocol: TCP
