@@ -11,11 +11,12 @@ import (
 )
 
 // newMux wires the HTTP routes. Split out so tests can exercise the handlers
-// without binding a port.
-func newMux() *http.ServeMux {
+// without binding a port. Takes the metrics registry so /metrics can expose it.
+func newMux(m *metrics) *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthHandler)
 	mux.HandleFunc("/count", countHandler)
+	mux.HandleFunc("/metrics", m.metricsHandler)
 	return mux
 }
 
@@ -46,9 +47,10 @@ func countHandler(w http.ResponseWriter, r *http.Request) {
 // serve runs the HTTP service until SIGINT/SIGTERM, then drains in-flight
 // requests with a bounded grace period (the readiness-probe lesson).
 func serve(addr string) error {
+	m := newMetrics()
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           newMux(),
+		Handler:           newMux(m),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

@@ -1,6 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	"sort"
+	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -63,4 +68,67 @@ func (m *metrics) observe(method, path, status string, seconds float64) {
 	}
 	m.sum[route] += seconds
 	m.cnt[route]++
+}
+
+// sortedKeys returns the registry keys in a stable order so the exposition
+// output is deterministic — Go map iteration order isn't.
+func sortedKeys(series map[labelKey]int64) []labelKey {
+	keys := make([]labelKey, 0, len(series))
+	for k := range series {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		if keys[i].path != keys[j].path {
+			return keys[i].path < keys[j].path
+		}
+		if keys[i].method != keys[j].method {
+			return keys[i].method < keys[j].method
+		}
+		return keys[i].status < keys[j].status
+	})
+	return keys
+}
+
+// render produces the full Prometheus text exposition for the registry.
+func (m *metrics) render() string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	var b strings.Builder
+	p := func(format string, args ...any) {
+		_, _ = b.WriteString(fmt.Sprintf(format, args...))
+	}
+
+	p("# HELP http_requests_total Total HTTP requests handled.\n")
+	p("# TYPE http_requests_total counter\n")
+	for _, k := range sortedKeys(m.reqTotal) {
+		p("http_requests_total{method=%q,path=%q,status=%q} %d\n",
+			k.method, k.path, k.status, m.reqTotal[k])
+	}
+
+	p("# HELP http_request_duration_seconds Request latency by route.\n")
+	p("# TYPE http_request_duration_seconds histogram\n")
+	for _, k := range sortedKeys(m.cnt) {
+		for i, bound := range durBounds {
+			p("http_request_duration_seconds_bucket{method=%q,path=%q,le=%q} %d\n",
+				k.method, k.path, strconv.FormatFloat(bound, 'g', -1, 64), m.buckets[k][i])
+		}
+		p("http_request_duration_seconds_bucket{method=%q,path=%q,le=\"+Inf\"} %d\n",
+			k.method, k.path, m.cnt[k])
+		p("http_request_duration_seconds_sum{method=%q,path=%q} %g\n", k.method, k.path, m.sum[k])
+		p("http_request_duration_seconds_count{method=%q,path=%q} %d\n", k.method, k.path, m.cnt[k])
+	}
+
+	p("# HELP http_requests_in_flight Requests currently being served.\n")
+	p("# TYPE http_requests_in_flight gauge\n")
+	p("http_requests_in_flight %d\n", atomic.LoadInt64(&m.inFlight))
+
+	return b.String()
+}
+
+// metricsHandler serves the registry in Prometheus text format. Kept on GET and
+// dependency-light so a scraper can hit it cheaply.
+func (m *metrics) metricsHandler(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	_, _ = w.Write([]byte(m.render()))
 }
