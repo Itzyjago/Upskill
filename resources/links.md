@@ -19,6 +19,13 @@ Curated, not exhaustive — links I've actually found useful.
 - Kubernetes "Configure Liveness, Readiness and Startup Probes" task page
 - Semantic Versioning 2.0.0 (semver.org) — the spec, it's short
 - The official YAML 1.2 spec + "Learn YAML in Y minutes" for the quick version
+- Prometheus docs — data model, exposition format, and the "instrumentation
+  best practices" page on naming and labels
+- PromQL: the official "Querying" docs + Robust Perception's "rate() vs irate()"
+- Google SRE book — the "Monitoring Distributed Systems" chapter (golden signals)
+- kind (Kubernetes in Docker) "Quick Start" — clusters, loading images, configs
+- OpenTelemetry docs — concepts, plus W3C Trace Context for `traceparent`
+- Go `log/slog` package docs — handlers, levels, and attrs
 
 ## Practice
 - Exercism — guided exercises with mentor feedback
