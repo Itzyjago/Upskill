@@ -22,9 +22,26 @@ curl -s --data-binary "hello world" \
 ```
 - `GET /healthz` — cheap readiness/liveness probe, always 200 when serving.
 - `POST /count` — counts the request body, returns a JSON tally.
+- `GET /metrics` — Prometheus text exposition (see below).
 - `SIGTERM` triggers a graceful shutdown that drains in-flight requests.
 
-See `deploy/` for the Kubernetes manifest that wires `/healthz` to a probe.
+## Metrics
+Every request through `/healthz` and `/count` is instrumented; `/metrics`
+exposes it in Prometheus format — hand-rolled with `fmt`, no `client_golang`
+dependency, to learn the exposition format.
+```sh
+curl -s localhost:8080/metrics
+# http_requests_total{method="POST",path="/count",status="200"} 1
+# http_request_duration_seconds_bucket{method="POST",path="/count",le="0.01"} 1
+# http_request_duration_seconds_count{method="POST",path="/count"} 1
+# http_requests_in_flight 0
+```
+- **counter** `http_requests_total` — by method, route, and status.
+- **histogram** `http_request_duration_seconds` — latency, by route.
+- **gauge** `http_requests_in_flight` — requests being served right now.
+
+See `deploy/` for the Kubernetes manifest that wires `/healthz` to a probe and
+annotates the pod for Prometheus scraping.
 
 ## Test
 ```sh
