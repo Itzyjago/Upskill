@@ -14,8 +14,10 @@ import (
 // without binding a port. Takes the metrics registry so /metrics can expose it.
 func newMux(m *metrics) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", healthHandler)
-	mux.HandleFunc("/count", countHandler)
+	mux.HandleFunc("/healthz", m.instrument("/healthz", healthHandler))
+	mux.HandleFunc("/count", m.instrument("/count", countHandler))
+	// /metrics is intentionally *not* instrumented — a scraper hitting it every
+	// few seconds would swamp the very numbers it's collecting.
 	mux.HandleFunc("/metrics", m.metricsHandler)
 	return mux
 }
