@@ -2,6 +2,27 @@
 
 A running journal — newest first. One short entry per session.
 
+## 2026-06-27
+- Closed out the deploy goal: brought up a **kind** cluster, loaded the locally
+  built image (the step everyone forgets), and applied `deploy/k8s.yaml`. Watched
+  `kubectl rollout status` block on the **readiness** probe and saw a bad-probe
+  pod stall the rollout instead of cutting over — roadmap #4 and #5 done.
+- Gave wordcount **observability**: a `/metrics` endpoint in Prometheus text
+  format (counter + latency histogram + in-flight gauge), hand-rolled with `fmt`
+  — no `client_golang` — to actually learn the exposition format. Instrumented
+  the handlers with middleware (a `statusRecorder` to capture the code) and added
+  structured per-request logging via `log/slog` (JSON to stdout).
+- Notes: Prometheus, the four golden signals, kind, PromQL, structured logging,
+  and distributed tracing. Annotated the pods for Prometheus scraping and added
+  `make kind-*` targets for the cluster loop.
+- What clicked: histograms ship *cumulative buckets* and let Prometheus compute
+  p95 server-side with `histogram_quantile` — and those percentiles still mean
+  something after you `sum` across pods, which is exactly why histograms beat
+  summaries. Also: metrics, logs, and traces are the same event seen three ways —
+  aggregate, detail, and causal path.
+- Goal for next time: wire OpenTelemetry traces (#7) and stand up a real
+  Prometheus + Grafana to scrape `/metrics` and graph the golden signals (#8).
+
 ## 2026-06-25
 - Knocked out the "real CI pipeline" goal: `.github/workflows/ci.yml` runs
   lint → test → build, staged with `needs` so a red lint blocks the rest, with
