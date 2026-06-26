@@ -1,9 +1,10 @@
 # wordcount task runner — practicing the Make notes on a real project.
 # `make` with no target prints help.
 
-BINARY := wc
-IMAGE  := wordcount
-PKG    := ./...
+BINARY  := wc
+IMAGE   := wordcount
+PKG     := ./...
+CLUSTER := upskill
 
 .DEFAULT_GOAL := help
 
@@ -35,6 +36,23 @@ run: build ## Build, then count this README
 .PHONY: image
 image: ## Build the container image
 	docker build -t $(IMAGE) .
+
+.PHONY: kind-up
+kind-up: ## Create the local kind cluster (see deploy/kind.yaml)
+	kind create cluster --name $(CLUSTER) --config deploy/kind.yaml
+
+.PHONY: kind-load
+kind-load: image ## Build the image and load it into the kind cluster
+	kind load docker-image $(IMAGE):latest --name $(CLUSTER)
+
+.PHONY: kind-deploy
+kind-deploy: kind-load ## Load the image, then apply the manifest and wait for rollout
+	kubectl apply -f deploy/k8s.yaml
+	kubectl rollout status deploy/$(IMAGE)
+
+.PHONY: kind-down
+kind-down: ## Delete the local kind cluster
+	kind delete cluster --name $(CLUSTER)
 
 .PHONY: clean
 clean: ## Remove build artifacts
