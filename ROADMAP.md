@@ -24,9 +24,14 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 ## Platform / DevOps
 - 🟢 Docker — images vs containers, multi-stage builds (containerized the CLI)
 - 🟢 CI/CD — built a real lint → test → build pipeline + tag-based release
-- 🟡 Observability — logs, metrics, traces
-- 🟡 Kubernetes — pods, deployments, services, probes (wrote a real manifest)
-- 🟡 Health checks — liveness vs readiness vs startup probes
+- 🟡 Observability — metrics + structured logs shipped (`/metrics`, slog);
+  tracing still to wire
+- 🟡 Kubernetes — pods, deployments, services, probes (ran the manifest on a
+  local kind cluster)
+- 🟢 Health checks — liveness vs readiness vs startup probes (watched readiness
+  gate a rollout on kind)
+- 🟡 Prometheus — metric types, exposition format, PromQL (hand-rolled an
+  exporter; haven't stood up a server to scrape it yet)
 
 ## Cross-cutting
 - 🟡 Testing — the pyramid, table-driven tests, doubles
@@ -37,8 +42,13 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 1. ✅ Containerize one small project end to end → `projects/wordcount` (Dockerfile).
 2. ✅ Build a small Go CLI to make the concurrency notes stick → `wordcount`.
 3. ✅ Stand up a real CI pipeline (lint → test → build) → `.github/workflows/ci.yml`.
-4. 🟡 Deploy the wordcount container + readiness probe → `-serve` mode and a k8s
-   manifest are in; still need to actually apply it to a cluster.
-5. Run the `deploy/k8s.yaml` on a local cluster (kind/minikube) and watch the
-   readiness probe gate traffic during a rollout.
-6. Add observability to the serve mode — a `/metrics` endpoint, then wire traces.
+4. ✅ Deploy the wordcount container + readiness probe → applied `deploy/k8s.yaml`
+   on a local kind cluster.
+5. ✅ Run it on a local cluster and watch the readiness probe gate traffic during
+   a rollout → done on kind (`make kind-deploy`, `kubectl rollout status`).
+6. 🟡 Add observability to the serve mode → `/metrics` (Prometheus format) and
+   structured slog request logging are in; **traces still to wire**.
+7. Wire OpenTelemetry tracing into the serve mode (`otelhttp` + a `trace_id` on
+   the log line) — the remaining half of #6.
+8. Stand up a real Prometheus + Grafana locally to actually scrape `/metrics`
+   and graph the golden signals with the PromQL from `notes/promql.md`.
