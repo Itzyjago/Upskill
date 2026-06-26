@@ -16,10 +16,18 @@ spec:
     metadata:
       labels:
         app: wordcount
+      annotations:
+        # Prometheus' k8s service-discovery looks for these to know what to scrape.
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
     spec:
       containers:
         - name: wordcount
           image: wordcount:latest
+          # :latest defaults to Always, which fails on a kind-loaded image with
+          # no registry to pull from — see notes/kind.md.
+          imagePullPolicy: IfNotPresent
           args: ["-serve", ":8080"]
           ports:
             - containerPort: 8080
@@ -61,8 +69,12 @@ kind: Service
 metadata:
   name: wordcount
 spec:
+  type: NodePort
   selector:
     app: wordcount
   ports:
     - port: 80
       targetPort: 8080
+      # Matches deploy/kind.yaml's extraPortMapping so `curl localhost:8080`
+      # on the host reaches the Service during a local rollout.
+      nodePort: 30080
