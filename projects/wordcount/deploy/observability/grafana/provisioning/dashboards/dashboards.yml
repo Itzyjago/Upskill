@@ -1,0 +1,11 @@
+# Dashboard provider — tells Grafana to load every dashboard JSON it finds in
+# the mounted folder on boot, so dashboards live in git, not in a clicked-together
+# state that dies with the container.
+apiVersion: 1
+providers:
+  - name: wordcount
+    type: file
+    allowUiUpdates: true          # edits in the UI are allowed but the file is source of truth
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: true

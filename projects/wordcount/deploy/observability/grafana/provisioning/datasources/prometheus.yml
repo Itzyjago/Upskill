@@ -1,0 +1,10 @@
+# Grafana data source, provisioned on boot — no clicking "Add data source".
+# The dashboard JSON references this source by its uid ("prometheus").
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy                 # Grafana's backend proxies queries (not the browser)
+    url: http://prometheus:9090   # the compose service name
+    isDefault: true
