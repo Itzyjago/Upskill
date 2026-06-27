@@ -26,6 +26,13 @@ Curated, not exhaustive — links I've actually found useful.
 - kind (Kubernetes in Docker) "Quick Start" — clusters, loading images, configs
 - OpenTelemetry docs — concepts, plus W3C Trace Context for `traceparent`
 - Go `log/slog` package docs — handlers, levels, and attrs
+- Grafana docs — "Provisioning" (data sources + dashboards as code) and the
+  dashboard JSON model
+- Prometheus docs — "Configuration" (scrape_configs, relabeling) and "Alerting
+  rules" + the Alertmanager overview
+- W3C Trace Context Recommendation — the `traceparent`/`tracestate` spec itself
+  (short, and the field layout is right there)
+- Jaeger / Grafana Tempo docs — where OTel traces actually land and get viewed
 
 ## Practice
 - Exercism — guided exercises with mentor feedback
