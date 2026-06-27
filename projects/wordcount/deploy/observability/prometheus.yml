@@ -5,6 +5,10 @@ global:
   scrape_interval: 5s
   evaluation_interval: 5s
 
+# Alerting rules, evaluated every evaluation_interval (see notes/alerting.md).
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
 scrape_configs:
   # The app. "wordcount" resolves to the compose service over the default network.
   - job_name: wordcount
