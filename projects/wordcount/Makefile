@@ -5,6 +5,7 @@ BINARY  := wc
 IMAGE   := wordcount
 PKG     := ./...
 CLUSTER := upskill
+COMPOSE := deploy/observability/docker-compose.yml
 
 .DEFAULT_GOAL := help
 
@@ -53,6 +54,14 @@ kind-deploy: kind-load ## Load the image, then apply the manifest and wait for r
 .PHONY: kind-down
 kind-down: ## Delete the local kind cluster
 	kind delete cluster --name $(CLUSTER)
+
+.PHONY: obs-up
+obs-up: ## Bring up the local Prometheus + Grafana stack (Grafana on :3000)
+	docker compose -f $(COMPOSE) up --build -d
+
+.PHONY: obs-down
+obs-down: ## Tear down the observability stack
+	docker compose -f $(COMPOSE) down
 
 .PHONY: clean
 clean: ## Remove build artifacts
