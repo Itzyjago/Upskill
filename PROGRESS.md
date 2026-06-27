@@ -2,6 +2,27 @@
 
 A running journal — newest first. One short entry per session.
 
+## 2026-06-27 (cont.)
+- Finished the observability arc — all three pillars now real. Stood up a
+  **Prometheus + Grafana** stack in `deploy/observability/` (compose): Prometheus
+  scrapes wordcount's `/metrics`, a **provisioned** Grafana dashboard graphs the
+  golden signals straight from the PromQL in `notes/promql.md`, and alert rules
+  load under the Alerts tab. `make obs-up` and it's all there — roadmap #8 done.
+- Wired **tracing** (#7) the same way I did metrics: hand-rolled, no OTel SDK.
+  `trace.go` parses/validates a W3C `traceparent`, keeps the trace-id and mints a
+  fresh child span, and the middleware stamps `trace_id`/`span_id` onto the slog
+  line so a log and its trace cross-link. Table tests cover the malformed-header
+  cases (bad version, all-zero ids, uppercase hex → start a fresh trace).
+- Notes: Grafana, the Prometheus scrape side (pull model, `up`, relabeling),
+  alerting (rules vs Alertmanager, the `for:` window), and W3C Trace Context.
+- What clicked: provisioning is the same lesson as everything else here — if a
+  dashboard or data source isn't a file in git, it's a snowflake that dies on
+  restart. And propagation really is the whole game for tracing: *keep the
+  trace-id, new span-id per hop* is the one rule that turns scattered spans into
+  one connected request.
+- Goal for next time: export real spans to Jaeger/Tempo for an actual waterfall
+  (#9), and add Alertmanager so a firing rule notifies somewhere real (#10).
+
 ## 2026-06-27
 - Closed out the deploy goal: brought up a **kind** cluster, loaded the locally
   built image (the step everyone forgets), and applied `deploy/k8s.yaml`. Watched
