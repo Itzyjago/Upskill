@@ -1,0 +1,45 @@
+# Local observability stack for wordcount — roadmap #8.
+# Brings up the app, Prometheus (scraping /metrics), and Grafana (dashboards)
+# so the golden-signals PromQL from notes/promql.md graphs against real traffic.
+#
+#   docker compose -f deploy/observability/docker-compose.yml up --build -d
+#   # generate some traffic:
+#   for i in $(seq 100); do curl -s --data-binary "hello world" localhost:8080/count >/dev/null; done
+#   open http://localhost:3000   # Grafana — anonymous viewer, dashboard auto-loads
+#   open http://localhost:9090   # Prometheus — Status > Targets shows wordcount UP
+#
+# Tear down with: docker compose -f deploy/observability/docker-compose.yml down
+services:
+  wordcount:
+    build:
+      context: ../..          # the wordcount project root (where the Dockerfile lives)
+    command: ["-serve", ":8080"]
+    ports:
+      - "8080:8080"
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - wordcount
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    environment:
+      # Demo-only creds; anonymous viewing is on so the dashboard opens with no login.
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
