@@ -1,0 +1,21 @@
+# Prometheus config for the local wordcount stack — roadmap #8.
+# Mounted into the prometheus container by deploy/observability/docker-compose.yml.
+# Scrapes the app's hand-rolled /metrics endpoint (no client_golang) every 5s.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # The app. "wordcount" resolves to the compose service over the default network.
+  - job_name: wordcount
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["wordcount:8080"]
+        labels:
+          app: wordcount
+
+  # Prometheus scraping itself — handy for confirming the server is alive and for
+  # seeing what its own `up`/scrape-duration series look like.
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
