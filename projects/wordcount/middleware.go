@@ -29,6 +29,22 @@ func (m *metrics) instrument(path string, next http.HandlerFunc) http.HandlerFun
 		m.incInFlight()
 		defer m.decInFlight()
 
+		// Trace context: continue the inbound trace if there's a valid
+		// traceparent, else start a fresh root. Either way we run our own child
+		// span (see notes/trace-context.md). The span rides in the request
+		// context so handlers can read it.
+		var sc spanContext
+		if parent, ok := parseTraceparent(r.Header.Get("traceparent")); ok {
+			sc = parent.child()
+		} else {
+			sc = newSpanContext()
+		}
+		r = r.WithContext(withSpan(r.Context(), sc))
+		// Echo our span back so a caller (curl -i) can see the trace id. With a
+		// real downstream call you'd inject this into the *outbound* request
+		// instead, making our span the next hop's parent.
+		w.Header().Set("traceparent", sc.traceparent())
+
 		start := time.Now()
 		rec := &statusRecorder{ResponseWriter: w, status: http.StatusOK}
 		next(rec, r)
@@ -36,12 +52,15 @@ func (m *metrics) instrument(path string, next http.HandlerFunc) http.HandlerFun
 		dur := time.Since(start)
 		m.observe(r.Method, path, strconv.Itoa(rec.status), dur.Seconds())
 		// One structured line per request — the same dimensions the metrics use,
-		// but keyed for grepping/log aggregation (see notes/structured-logging.md).
+		// plus trace_id/span_id so a log and its trace cross-link
+		// (see notes/structured-logging.md, notes/trace-context.md).
 		slog.Info("request",
 			"method", r.Method,
 			"path", path,
 			"status", rec.status,
 			"dur_ms", dur.Milliseconds(),
+			"trace_id", sc.traceID,
+			"span_id", sc.spanID,
 		)
 	}
 }
