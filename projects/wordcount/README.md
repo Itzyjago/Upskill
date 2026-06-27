@@ -43,6 +43,22 @@ curl -s localhost:8080/metrics
 See `deploy/` for the Kubernetes manifest that wires `/healthz` to a probe and
 annotates the pod for Prometheus scraping.
 
+## Observability stack (Prometheus + Grafana)
+`deploy/observability/` is a docker-compose stack that actually scrapes the
+`/metrics` above and graphs the golden signals — roadmap #8.
+```sh
+make obs-up          # build the app + start Prometheus and Grafana
+# drive some traffic so there's something to graph:
+for i in $(seq 200); do curl -s --data-binary "hello world" localhost:8080/count >/dev/null; done
+open http://localhost:3000     # Grafana — the "Golden Signals" dashboard auto-loads
+open http://localhost:9090     # Prometheus — Status > Targets shows wordcount UP
+make obs-down        # tear it all down
+```
+- Prometheus config + alert rules: `deploy/observability/prometheus.yml`,
+  `deploy/observability/rules/`.
+- Grafana is provisioned (datasource + dashboard) from
+  `deploy/observability/grafana/` — no manual clicking, it's all in git.
+
 ## Test
 ```sh
 go test ./...
