@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // W3C Trace Context, hand-rolled — same spirit as the hand-rolled Prometheus
@@ -107,6 +108,41 @@ func isLowerHex(s string) bool {
 func isAllZero(s string) bool {
 	return strings.Trim(s, "0") == ""
 }
+
+// span is a *timed* unit of work within a trace: the spanContext (trace/span ids
+// + sampled) plus the bits a backend needs to draw a waterfall — the parent's
+// span id, a name, start/end, and whether it failed. trace.go propagates ids;
+// this is the timing half that otlp.go exports. See notes/otlp.md.
+type span struct {
+	sc       spanContext
+	parentID string // the inbound parent's span id; "" makes this a root span
+	name     string
+	start    time.Time
+	end      time.Time
+	failed   bool
+}
+
+// startServerSpan begins the server span for an inbound request. If the request
+// carries a valid traceparent we continue that trace and record the sender as
+// our parent (so the spans stitch into one tree); otherwise we start a fresh
+// root. `now` is injected rather than read here so callers and tests control the
+// clock.
+func startServerSpan(traceparent, name string, now time.Time) span {
+	if parent, ok := parseTraceparent(traceparent); ok {
+		return span{sc: parent.child(), parentID: parent.spanID, name: name, start: now}
+	}
+	return span{sc: newSpanContext(), name: name, start: now}
+}
+
+// finish stamps the end time (and outcome) and returns the completed span, ready
+// to export. Kept as a value method so a half-built span can't leak out.
+func (s span) finish(now time.Time, failed bool) span {
+	s.end, s.failed = now, failed
+	return s
+}
+
+// duration is the wall-clock span length — what shows up as a bar in the trace.
+func (s span) duration() time.Duration { return s.end.Sub(s.start) }
 
 // withSpan stashes a spanContext in the request context so handlers (and the log
 // line) downstream can read it. Mirrors how go-context.md threads a deadline.
