@@ -12,11 +12,12 @@ import (
 )
 
 // newMux wires the HTTP routes. Split out so tests can exercise the handlers
-// without binding a port. Takes the metrics registry so /metrics can expose it.
-func newMux(m *metrics) *http.ServeMux {
+// without binding a port. Takes the metrics registry so /metrics can expose it,
+// and the span exporter (nil = export disabled) so handlers emit traces.
+func newMux(m *metrics, tr *otlpExporter) *http.ServeMux {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", m.instrument("/healthz", healthHandler))
-	mux.HandleFunc("/count", m.instrument("/count", countHandler))
+	mux.HandleFunc("/healthz", m.instrument("/healthz", tr, healthHandler))
+	mux.HandleFunc("/count", m.instrument("/count", tr, countHandler))
 	// /metrics is intentionally *not* instrumented — a scraper hitting it every
 	// few seconds would swamp the very numbers it's collecting.
 	mux.HandleFunc("/metrics", m.metricsHandler)
@@ -54,9 +55,18 @@ func serve(addr string) error {
 	// containerized services where stdout is the log stream.
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	m := newMetrics()
+
+	// Span export is opt-in via the standard OTel env var. Unset → tr stays nil
+	// and we skip export; spans are still timed and logged. See notes/otlp.md.
+	var tr *otlpExporter
+	if ep := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); ep != "" {
+		tr = newOTLPExporter(ep, "wordcount")
+		slog.Info("otlp export enabled", "endpoint", ep)
+	}
+
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           newMux(m),
+		Handler:           newMux(m, tr),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 

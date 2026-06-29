@@ -51,7 +51,7 @@ func TestRenderExposition(t *testing.T) {
 
 func TestInstrumentedEndpoint(t *testing.T) {
 	m := newMetrics()
-	mux := newMux(m)
+	mux := newMux(m, nil) // nil exporter: span export disabled for this test
 
 	// Drive one /count request through the instrumented mux.
 	req := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader("hello world\n"))
