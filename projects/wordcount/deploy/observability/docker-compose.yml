@@ -45,6 +45,18 @@ services:
       - "9090:9090"
     depends_on:
       - wordcount
+      - alertmanager
+
+  alertmanager:
+    # Receives firing alerts from Prometheus and routes them to a receiver —
+    # roadmap #10. Config (the routing tree) lives in alertmanager.yml.
+    image: prom/alertmanager:v0.27.0
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"   # Alertmanager UI — firing/grouped alerts, silences
 
   grafana:
     image: grafana/grafana:11.1.0

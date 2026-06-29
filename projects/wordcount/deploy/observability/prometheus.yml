@@ -9,6 +9,14 @@ global:
 rule_files:
   - /etc/prometheus/rules/*.yml
 
+# Where firing alerts get pushed for routing/delivery — roadmap #10.
+# Prometheus only decides an alert fires; Alertmanager owns everything after
+# (grouping, routing to a receiver). See notes/alertmanager.md.
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   # The app. "wordcount" resolves to the compose service over the default network.
   - job_name: wordcount
