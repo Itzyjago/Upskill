@@ -1,16 +1,15 @@
-# Alerting rules for wordcount — roadmap #8.
-# Loaded by prometheus.yml's rule_files; visible under Prometheus' Alerts tab.
-# There's no Alertmanager in this stack, so a firing alert lights up the UI but
-# pages no one — enough to learn rule evaluation and the `for:` window.
+# Alerting rules for wordcount — roadmap #8, now reading the recorded series
+# from recording.yml (roadmap #11). Loaded by prometheus.yml's rule_files and
+# pushed to Alertmanager when firing (roadmap #10, notes/alertmanager.md).
+# These read the precomputed job:... series so the alert and the Grafana
+# dashboard ask the exact same question — no drifting copies of the PromQL.
+# See notes/recording-rules.md.
 groups:
   - name: wordcount-golden-signals
     rules:
       # Errors — page when 5xx exceed 5% of traffic for 2 minutes.
       - alert: HighErrorRate
-        expr: |
-          sum(rate(http_requests_total{status=~"5.."}[5m]))
-            /
-          sum(rate(http_requests_total[5m])) > 0.05
+        expr: job:http_requests:error_ratio5m > 0.05
         for: 2m
         labels:
           severity: page
@@ -20,9 +19,7 @@ groups:
 
       # Latency — warn when p95 crosses 500ms (well past this in-memory handler's norm).
       - alert: HighLatencyP95
-        expr: |
-          histogram_quantile(0.95,
-            sum(rate(http_request_duration_seconds_bucket[5m])) by (le)) > 0.5
+        expr: job:http_request_duration_seconds:p95_5m > 0.5
         for: 5m
         labels:
           severity: warning
@@ -32,7 +29,7 @@ groups:
 
       # Traffic — a dead service serves nothing; warn if no requests for 10m.
       - alert: NoTraffic
-        expr: sum(rate(http_requests_total[5m])) == 0
+        expr: job:http_requests:rate5m == 0
         for: 10m
         labels:
           severity: warning
