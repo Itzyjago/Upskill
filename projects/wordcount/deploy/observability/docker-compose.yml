@@ -9,6 +9,9 @@
 #   open http://localhost:3000    # Grafana — anonymous viewer, dashboard auto-loads
 #   open http://localhost:9090    # Prometheus — Status > Targets shows wordcount UP
 #   open http://localhost:16686   # Jaeger — pick service "wordcount" to see the waterfall
+#   open http://localhost:9093    # Alertmanager — firing/grouped alerts and silences
+#   # watch a routed alert land at the webhook sink:
+#   docker compose -f deploy/observability/docker-compose.yml logs -f alertsink
 #
 # Tear down with: docker compose -f deploy/observability/docker-compose.yml down
 services:
@@ -57,6 +60,14 @@ services:
       - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
     ports:
       - "9093:9093"   # Alertmanager UI — firing/grouped alerts, silences
+
+  alertsink:
+    # The webhook receiver Alertmanager routes to — the same wordcount binary in
+    # `-webhook` mode (webhook.go). No published port; it's reached over the
+    # compose network. Tail it with: docker compose logs -f alertsink.
+    build:
+      context: ../..
+    command: ["-webhook", ":9094"]
 
   grafana:
     image: grafana/grafana:11.1.0

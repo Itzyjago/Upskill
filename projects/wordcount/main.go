@@ -50,15 +50,24 @@ func count(r io.Reader) (counts, error) {
 
 func main() {
 	var showL, showW, showC bool
-	var serveAddr string
+	var serveAddr, webhookAddr string
 	flag.BoolVar(&showL, "l", false, "count lines")
 	flag.BoolVar(&showW, "w", false, "count words")
 	flag.BoolVar(&showC, "c", false, "count bytes")
 	flag.StringVar(&serveAddr, "serve", "", "run as an HTTP service on this address (e.g. :8080)")
+	flag.StringVar(&webhookAddr, "webhook", "", "run an Alertmanager webhook sink on this address (e.g. :9094)")
 	flag.Parse()
 
 	if serveAddr != "" {
 		if err := serve(serveAddr); err != nil {
+			fmt.Fprintln(os.Stderr, "wc:", err)
+			os.Exit(1)
+		}
+		return
+	}
+
+	if webhookAddr != "" {
+		if err := webhookSink(webhookAddr); err != nil {
 			fmt.Fprintln(os.Stderr, "wc:", err)
 			os.Exit(1)
 		}
