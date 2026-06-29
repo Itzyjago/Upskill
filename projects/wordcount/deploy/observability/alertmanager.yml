@@ -1,0 +1,33 @@
+# Alertmanager config for the local wordcount stack — roadmap #10.
+# Mounted into the alertmanager container by docker-compose.yml. Routes the
+# alerts Prometheus pushes here (rules/alerts.yml) to a webhook receiver — the
+# tiny sink that `wc -webhook` runs. See notes/alertmanager.md.
+
+route:
+  receiver: webhook-default   # fallback when no child route matches
+  group_by: [alertname]       # one notification per alertname, not per series
+  group_wait: 10s             # short so the demo notifies quickly
+  group_interval: 1m
+  repeat_interval: 1h         # re-send a still-firing alert at most hourly
+  routes:
+    # severity=page (set on the rule in rules/alerts.yml) takes the oncall path;
+    # everything else falls through to webhook-default.
+    - matchers: [severity="page"]
+      receiver: webhook-oncall
+
+receivers:
+  - name: webhook-default
+    webhook_configs:
+      - url: http://alertsink:9094/
+        send_resolved: true   # also notify when the alert clears
+  - name: webhook-oncall
+    webhook_configs:
+      - url: http://alertsink:9094/
+        send_resolved: true
+
+inhibit_rules:
+  # While a page is firing, mute warnings — the page already woke someone, so the
+  # warning is just noise on top. (An `equal:` would scope this per-app in a
+  # multi-app setup; here there's only wordcount.) See notes/alertmanager.md.
+  - source_matchers: [severity="page"]
+    target_matchers: [severity="warning"]
