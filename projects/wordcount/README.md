@@ -23,6 +23,8 @@ curl -s --data-binary "hello world" \
 - `GET /healthz` — cheap readiness/liveness probe, always 200 when serving.
 - `POST /count` — counts the request body, returns a JSON tally.
 - `GET /metrics` — Prometheus text exposition (see below).
+- Every response carries a `traceparent` header; set `OTEL_EXPORTER_OTLP_ENDPOINT`
+  to ship the span to a collector (see Tracing below).
 - `SIGTERM` triggers a graceful shutdown that drains in-flight requests.
 
 ## Metrics
@@ -58,6 +60,21 @@ make obs-down        # tear it all down
   `deploy/observability/rules/`.
 - Grafana is provisioned (datasource + dashboard) from
   `deploy/observability/grafana/` — no manual clicking, it's all in git.
+
+## Tracing (OTLP → Jaeger)
+The stack also runs Jaeger, and the app ships a span per request to it via a
+hand-rolled OTLP/HTTP JSON exporter (`otlp.go`, no OpenTelemetry SDK) — roadmap
+#9. The trace ids are the same ones from the `traceparent` header; OTLP just adds
+the timings so Jaeger can draw a waterfall.
+```sh
+make obs-up          # now also starts Jaeger (OTLP ingest + UI)
+for i in $(seq 50); do curl -s --data-binary "hello world" localhost:8080/count >/dev/null; done
+open http://localhost:16686    # Jaeger — pick service "wordcount", find traces
+```
+- Export is opt-in: set `OTEL_EXPORTER_OTLP_ENDPOINT` (the compose file points it
+  at `http://jaeger:4318`). Unset → spans are still timed and logged, just not shipped.
+- It's best-effort and off the hot path: a collector that's down never fails or
+  slows a request (`notes/otlp.md`).
 
 ## Test
 ```sh
