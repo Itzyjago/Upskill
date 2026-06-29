@@ -24,15 +24,20 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 ## Platform / DevOps
 - 🟢 Docker — images vs containers, multi-stage builds (containerized the CLI)
 - 🟢 CI/CD — built a real lint → test → build pipeline + tag-based release
-- 🟢 Observability — all three pillars in: `/metrics`, structured slog, and
-  hand-rolled W3C trace context (`traceparent` + `trace_id` on the log line)
+- 🟢 Observability — all three pillars *exported*: `/metrics`, structured slog,
+  and real OTLP spans shipped to Jaeger (hand-rolled OTLP/HTTP, no SDK) — an
+  actual waterfall, not just a propagated `traceparent`
 - 🟡 Kubernetes — pods, deployments, services, probes (ran the manifest on a
   local kind cluster)
 - 🟢 Health checks — liveness vs readiness vs startup probes (watched readiness
   gate a rollout on kind)
-- 🟢 Prometheus — metric types, exposition format, PromQL, *and* a real server:
-  a compose stack scrapes `/metrics`, Grafana graphs the golden signals, alert
-  rules load
+- 🟢 Prometheus — metric types, exposition format, PromQL, recording rules, *and*
+  a real server: a compose stack scrapes `/metrics`, Grafana graphs the golden
+  signals, recording rules precompute them, alert rules fire
+- 🟢 Alerting — Prometheus rules + the `for:` window, and Alertmanager routing a
+  page to a real webhook receiver (grouping, inhibition, the routing tree)
+- 🟢 Distributed tracing — W3C trace context propagation + OTLP/HTTP export to
+  Jaeger; spans carry timings, the log line cross-links via `trace_id`
 
 ## Cross-cutting
 - 🟡 Testing — the pyramid, table-driven tests, doubles
@@ -55,10 +60,20 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 8. ✅ Stand up Prometheus + Grafana locally → `deploy/observability/` compose
    stack scrapes `/metrics`, a provisioned Grafana dashboard graphs the golden
    signals, and alert rules load (`make obs-up`).
-9. Export real spans, not just the header — push OTLP to Jaeger/Tempo and see an
-   actual waterfall (the half `trace.go` doesn't do: it propagates context but
-   records no span timings yet).
-10. Add Alertmanager to the stack and route one alert somewhere real (a webhook),
-    so a firing rule actually notifies instead of just lighting up the UI.
-11. Recording rules — precompute the golden-signal expressions so dashboards and
-    alerts read cheap, pre-aggregated series instead of re-running `rate()` math.
+9. ✅ Export real spans, not just the header → hand-rolled OTLP/HTTP JSON exporter
+   (`otlp.go`) ships a timed span per request to Jaeger; `trace.go` now records
+   start/end + parent id, and the compose stack runs Jaeger (UI on :16686).
+10. ✅ Add Alertmanager and route an alert somewhere real → Alertmanager in the
+    stack, `alertmanager.yml` routes `severity=page` to a webhook, and a `wc
+    -webhook` sink logs the routed alert (reuses the binary).
+11. ✅ Recording rules — `rules/recording.yml` precomputes the golden signals
+    (`job:...` series); the alerts and the error-ratio panel read them so the
+    dashboard and the alert can't drift apart.
+
+### Next up
+12. Export real OTLP spans for the *outbound* hop too — make wordcount call a
+    second instance of itself and watch a two-service trace stitch in Jaeger.
+13. Add tail sampling at the collector so only slow/errored traces are kept —
+    the cost-control half of `notes/distributed-tracing.md` that's still theory.
+14. Grafana alerting vs. Prometheus/Alertmanager — try the same page from
+    Grafana's own alert engine and write up where each one fits.

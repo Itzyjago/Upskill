@@ -2,6 +2,34 @@
 
 A running journal — newest first. One short entry per session.
 
+## 2026-06-29
+- Extended the observability arc — cleared the three open "next up" goals (#9–11),
+  all in the project's hand-rolled, no-SDK spirit.
+- **#9 OTLP → Jaeger.** Closed the gap `trace.go` left: it propagated a
+  `traceparent` but recorded no timings. Added a `span` type (start/end, name,
+  parent id, status) and a hand-rolled OTLP/HTTP **JSON** exporter (`otlp.go`)
+  that POSTs `ResourceSpans` to `/v1/traces`. The middleware times each request
+  and ships the span off the hot path (best-effort, like propagation). Jaeger
+  now runs in the compose stack — a real waterfall on :16686. Tests cover the
+  payload (id mapping, root-span parent omitted, ns-as-string).
+- **#10 Alertmanager.** Added it to the stack and pointed Prometheus at it;
+  `alertmanager.yml` routes `severity=page` to a webhook. Wrote the receiver as a
+  `wc -webhook` mode (`webhook.go`) so a fired alert lands in a log line instead
+  of just lighting up the UI — reusing the same binary, no new tool.
+- **#11 Recording rules.** `rules/recording.yml` precomputes the golden signals
+  as `job:...` series; the alerts and the error-ratio panel now read those, so
+  the dashboard and the alert can't drift apart.
+- What clicked: OTLP export and `traceparent` propagation are two halves of one
+  span — the header moves the *id* across a hop, OTLP reports the *timings* to a
+  backend. And the noise controls live in two layers: `for:` (Prometheus, "is it
+  real?") vs. grouping/`repeat_interval` (Alertmanager, "how often does a human
+  hear it?"). Recording rules are just a materialized view for metrics.
+- Caveat: built without a local Go/Docker toolchain on this box — code is written
+  to compile and the configs to load, but `go test ./...` + `make obs-up` still
+  need a run on a machine that has them. That's goal one for next time.
+- Goal for next time: a two-service trace (#12) — wordcount calling itself, the
+  span tree stitching across the hop in Jaeger.
+
 ## 2026-06-27 (cont.)
 - Finished the observability arc — all three pillars now real. Stood up a
   **Prometheus + Grafana** stack in `deploy/observability/` (compose): Prometheus
