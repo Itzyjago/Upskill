@@ -1,8 +1,9 @@
-# Local observability stack for wordcount — roadmap #8 + #9 + #12.
+# Local observability stack for wordcount — roadmap #8 + #9 + #12 + #13.
 # Brings up two wordcount instances (edge + upstream), Prometheus (scraping
-# /metrics), Grafana (dashboards), and Jaeger (traces) so all three pillars are
-# live against real traffic: the golden-signals PromQL from notes/promql.md,
-# and the OTLP spans from notes/otlp.md.
+# /metrics), Grafana (dashboards), an OTel Collector doing tail sampling, and
+# Jaeger (traces) so all three pillars are live against real traffic: the
+# golden-signals PromQL from notes/promql.md, and the OTLP spans from
+# notes/otlp.md.
 #
 #   docker compose -f deploy/observability/docker-compose.yml up --build -d
 #   # generate some traffic — every request now hops edge -> upstream:
@@ -10,7 +11,10 @@
 #   open http://localhost:3000    # Grafana — anonymous viewer, dashboard auto-loads
 #   open http://localhost:9090    # Prometheus — Status > Targets shows wordcount UP
 #   open http://localhost:16686   # Jaeger — pick service "wordcount", find a trace:
-#                                  # two spans, two services (wordcount -> wordcount-upstream)
+#                                  # two spans, two services (wordcount -> wordcount-upstream).
+#                                  # With 100 clean requests, expect roughly ~10 traces to
+#                                  # actually show up — the collector's tail_sampling baseline
+#                                  # policy keeps 10% of the boring ones (otel-collector.yaml)
 #   open http://localhost:9093    # Alertmanager — firing/grouped alerts and silences
 #   # watch a routed alert land at the webhook sink:
 #   docker compose -f deploy/observability/docker-compose.yml logs -f alertsink
@@ -25,15 +29,17 @@ services:
       context: ../..          # the wordcount project root (where the Dockerfile lives)
     command: ["-serve", ":8080"]
     environment:
-      # Turns on the hand-rolled OTLP exporter (otlp.go) and points it at Jaeger's
-      # OTLP/HTTP ingest. Unset = spans are still timed and logged, just not shipped.
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      # Turns on the hand-rolled OTLP exporter (otlp.go) and points it at the
+      # collector, not Jaeger directly — tail sampling (otel-collector.yaml,
+      # roadmap #13) needs every span to pass through it first. Unset = spans
+      # are still timed and logged, just not shipped.
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=wordcount
       - WORDCOUNT_UPSTREAM_URL=http://wordcount-upstream:8080/count
     ports:
       - "8080:8080"
     depends_on:
-      - jaeger
+      - otel-collector
       - wordcount-upstream
 
   wordcount-upstream:
@@ -44,10 +50,10 @@ services:
       context: ../..
     command: ["-serve", ":8080"]
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
       - OTEL_SERVICE_NAME=wordcount-upstream
     depends_on:
-      - jaeger
+      - otel-collector
 
   jaeger:
     # all-in-one: OTLP ingest + storage + UI in one container, for local use.
@@ -56,12 +62,13 @@ services:
       - COLLECTOR_OTLP_ENABLED=true   # accept OTLP on :4317 (gRPC) and :4318 (HTTP)
     ports:
       - "16686:16686"  # Jaeger UI
-      - "4318:4318"    # OTLP/HTTP — where otlp.go POSTs /v1/traces directly today
+      - "4318:4318"    # OTLP/HTTP — unused by the app now (see otel-collector),
+                        # published for poking at Jaeger's ingest directly
 
   otel-collector:
-    # Sits between the app and Jaeger so tail sampling (deployed but not yet
-    # wired into the app — next commit) has a place to buffer a whole trace
-    # before deciding to keep or drop it. See otel-collector.yaml, roadmap #13.
+    # Both wordcount instances export here now, not straight to Jaeger — tail
+    # sampling (otel-collector.yaml, roadmap #13) needs the whole trace in one
+    # place before it can decide to keep or drop it.
     image: otel/opentelemetry-collector-contrib:0.105.0
     command: ["--config=/etc/otel-collector.yaml"]
     volumes:
