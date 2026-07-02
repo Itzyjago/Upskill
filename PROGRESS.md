@@ -2,6 +2,37 @@
 
 A running journal — newest first. One short entry per session.
 
+## 2026-07-03
+- Closed both remaining tracing "next up" goals.
+- **#13 Tail sampling.** Both wordcount instances now export to an OTel
+  Collector instead of Jaeger directly (`otel-collector.yaml`). `decision_wait`
+  holds a trace open until every span lands, then three policies decide: keep
+  errors, keep anything past the 500ms p95 threshold, sample the rest at 10%.
+  Verified the shape reading the config, not by watching Jaeger drop traces —
+  still no Docker on this box (see the 2026-06-29 caveat, still true).
+- **#14 Grafana alerting.** Provisioned a Grafana-native mirror of
+  `HighErrorRate` — same recorded series, same 5% threshold — as an alert
+  rule + contact point + notification policy
+  (`grafana/provisioning/alerting/`). It maps onto Prometheus rule /
+  receiver / route almost one-to-one; the interesting difference turned out to
+  be *where the alert's state lives* (next to the metric vs. one engine over
+  everything), not the feature set. Not meant to run alongside the Prometheus
+  version for real — just there to compare the two shapes.
+- Also fixed a second, unrelated thing: CI's `golangci-lint-action` pins
+  `version: latest`, and a newer release started flagging code that was
+  already sitting in the repo (an unused probe-handler param, a local var
+  shadowing the `print` builtin) — caught it because the push right after #12
+  went red on lint, not on anything I'd actually changed. Worth remembering
+  for next time something fails that "shouldn't have."
+- What clicked: tail sampling and Grafana-vs-Alertmanager are the same lesson
+  from two directions — Alertmanager's `group_*`/`repeat_interval` and
+  Grafana's notification policy both exist because *deciding something's true*
+  and *deciding how a human hears about it* are separate problems; tail
+  sampling is that same separation one layer earlier, deciding *whether to
+  keep the record at all* only after the whole story (every span) has arrived.
+- Goal for next time: a HorizontalPodAutoscaler (#15) — the k8s bullet still
+  says "runs," not "scales."
+
 ## 2026-07-02
 - Cleared #12, the goal from last time: a real two-service trace. `client.go`
   adds `upstreamClient` — wraps an outbound `/count` call in a **client** span

@@ -35,11 +35,14 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
   a real server: a compose stack scrapes `/metrics`, Grafana graphs the golden
   signals, recording rules precompute them, alert rules fire
 - 🟢 Alerting — Prometheus rules + the `for:` window, and Alertmanager routing a
-  page to a real webhook receiver (grouping, inhibition, the routing tree)
+  page to a real webhook receiver (grouping, inhibition, the routing tree);
+  also provisioned the same alert as a Grafana-native rule to compare the two
+  engines' shapes
 - 🟢 Distributed tracing — W3C trace context propagation + OTLP/HTTP export to
   Jaeger; spans carry timings, the log line cross-links via `trace_id`; a real
   two-service trace (client span forwards to a second instance, server span on
-  the far side parents to it)
+  the far side parents to it); an OTel Collector tail-samples (errors + slow
+  always kept, 10% baseline) before spans reach Jaeger
 
 ## Cross-cutting
 - 🟡 Testing — the pyramid, table-driven tests, doubles
@@ -80,6 +83,13 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     both wordcount instances and Jaeger; `tail_sampling` keeps every errored or
     >500ms trace and a flat 10% baseline of the rest (`otel-collector.yaml`).
 
+14. ✅ Grafana alerting vs. Prometheus/Alertmanager — provisioned a
+    Grafana-native mirror of `HighErrorRate` (alert rule, contact point,
+    notification policy) next to the Prometheus/Alertmanager original; same
+    shape, different engine — `notes/grafana.md`.
+
 ### Next up
-14. Grafana alerting vs. Prometheus/Alertmanager — try the same page from
-    Grafana's own alert engine and write up where each one fits.
+15. Kubernetes: a HorizontalPodAutoscaler for the deployment — the "runs" part
+    of the roadmap bullet is done, the "scales" part isn't.
+16. Security: the `/count` body read is unbounded — cap it, and write up why
+    that's a resource-exhaustion footgun, not just a style nit.
