@@ -31,6 +31,34 @@ for _, tt := range tests {
 - **Fake** is a working lightweight impl (in-memory DB). Prefer fakes over deep
   mock chains — mocks couple tests to call structure.
 
+## The fake-collector-shaped hole (wordcount)
+Two different answers to "how do I test code that calls an external
+collector?" sit side by side in `projects/wordcount`, and only one of them is
+a real double:
+- `otlpExporter` (the OTLP-to-Jaeger client) is nil-able everywhere it's used
+  — `middleware.go`, `client.go` — and every test just passes `nil` to skip
+  export entirely (`newMux(m, nil, nil)`). That's not a double, it's an
+  **escape hatch**: it proves the *rest* of the request path works, but it
+  asserts nothing about export itself — a payload-shape bug in `otlp.go`
+  would sail through every handler test untouched. (`otlp_test.go` does cover
+  the payload directly, just via a separate, narrower set of tests — the gap
+  is that nothing exercises "middleware calls export and the right thing
+  happens.")
+- `upstreamClient` (the *other* outbound call, `client.go`) gets tested with
+  an actual **fake**: `client_test.go` stands up a real `httptest.NewServer`
+  and asserts on what it received (the injected `traceparent`) and returns
+  canned responses (a 500, a slow body). That's Testing 101 "prefer fakes over
+  deep mocks" — a working lightweight HTTP server beats asserting call
+  structure, and it costs nothing extra since `net/http/httptest` is already
+  in every Go toolchain.
+- The difference: `upstreamClient` talks HTTP request/response, trivial to
+  fake with `httptest`. `otlpExporter`'s effect is fire-and-forget from a
+  goroutine (`middleware.go`'s `go func() { ... tr.export(...) }()`) — testing
+  *that* actually happened means either sleeping and racing the goroutine, or
+  giving `metrics`/`otlpExporter` a way to synchronize, which nothing here
+  does yet. Nil-as-escape-hatch was the path of least resistance, not a
+  deliberate design choice — worth coming back to.
+
 ## Coverage & discipline
 - Coverage shows what's *unexecuted*, not what's *correct*. 100% ≠ bug-free.
 - Write the failing test first (red → green → refactor) — see TDD.
