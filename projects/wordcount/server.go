@@ -13,11 +13,17 @@ import (
 
 // newMux wires the HTTP routes. Split out so tests can exercise the handlers
 // without binding a port. Takes the metrics registry so /metrics can expose it,
-// and the span exporter (nil = export disabled) so handlers emit traces.
-func newMux(m *metrics, tr *otlpExporter) *http.ServeMux {
+// the span exporter (nil = export disabled) so handlers emit traces, and an
+// upstream client (nil = count locally, set = forward to it — roadmap #12,
+// client.go) so /count can act as either the edge or the leaf of a trace.
+func newMux(m *metrics, tr *otlpExporter, up *upstreamClient) *http.ServeMux {
+	handler := countHandler
+	if up != nil {
+		handler = forwardCountHandler(up)
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", m.instrument("/healthz", tr, healthHandler))
-	mux.HandleFunc("/count", m.instrument("/count", tr, countHandler))
+	mux.HandleFunc("/count", m.instrument("/count", tr, handler))
 	// /metrics is intentionally *not* instrumented — a scraper hitting it every
 	// few seconds would swamp the very numbers it's collecting.
 	mux.HandleFunc("/metrics", m.metricsHandler)
@@ -64,9 +70,18 @@ func serve(addr string) error {
 		slog.Info("otlp export enabled", "endpoint", ep)
 	}
 
+	// Set on the "edge" instance only — it forwards /count to another
+	// wordcount instance instead of counting locally, so the trace stitches
+	// across two services (roadmap #12, client.go).
+	var up *upstreamClient
+	if url := os.Getenv("WORDCOUNT_UPSTREAM_URL"); url != "" {
+		up = newUpstreamClient(url, tr)
+		slog.Info("forwarding /count upstream", "url", url)
+	}
+
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           newMux(m, tr),
+		Handler:           newMux(m, tr, up),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
