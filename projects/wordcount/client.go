@@ -96,9 +96,9 @@ func forwardCountHandler(up *upstreamClient) http.HandlerFunc {
 			http.Error(w, "POST the text to count", http.StatusMethodNotAllowed)
 			return
 		}
-		body, err := io.ReadAll(r.Body)
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxCountBodyBytes))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), statusForBodyErr(err))
 			return
 		}
 		c, err := up.count(r.Context(), body)

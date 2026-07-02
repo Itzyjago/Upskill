@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -10,6 +11,22 @@ import (
 	"syscall"
 	"time"
 )
+
+// maxCountBodyBytes caps how much of a /count request body count() or
+// forwardCountHandler will read — an unbounded read is a resource-exhaustion
+// DoS, not just a style nit (notes/security.md). Generous for a text-counting
+// tool, small enough that one request can't OOM the process.
+const maxCountBodyBytes = 10 << 20 // 10MB
+
+// statusForBodyErr maps a body-read error to an HTTP status: 413 if
+// http.MaxBytesReader's cap tripped, 400 for any other read failure.
+func statusForBodyErr(err error) int {
+	var mbErr *http.MaxBytesError
+	if errors.As(err, &mbErr) {
+		return http.StatusRequestEntityTooLarge
+	}
+	return http.StatusBadRequest
+}
 
 // newMux wires the HTTP routes. Split out so tests can exercise the handlers
 // without binding a port. Takes the metrics registry so /metrics can expose it,
@@ -43,9 +60,9 @@ func countHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "POST the text to count", http.StatusMethodNotAllowed)
 		return
 	}
-	c, err := count(r.Body)
+	c, err := count(http.MaxBytesReader(w, r.Body, maxCountBodyBytes))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, err.Error(), statusForBodyErr(err))
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
