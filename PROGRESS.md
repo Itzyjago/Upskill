@@ -30,8 +30,22 @@ A running journal — newest first. One short entry per session.
   and *deciding how a human hears about it* are separate problems; tail
   sampling is that same separation one layer earlier, deciding *whether to
   keep the record at all* only after the whole story (every span) has arrived.
-- Goal for next time: a HorizontalPodAutoscaler (#15) — the k8s bullet still
-  says "runs," not "scales."
+- **#15 HorizontalPodAutoscaler.** Kubernetes was "runs," now it also
+  "scales" — 2-5 replicas, 70% CPU target on the Deployment's existing
+  `requests.cpu`. `make kind-metrics-server` installs the add-on kind doesn't
+  ship, patched with `--kubelet-insecure-tls` for kind's networking — an HPA
+  with no metrics-server just sits at `unknown`, no loud error to notice.
+- **#16 Cap the request body.** `countHandler` and `forwardCountHandler` were
+  both reading an unbounded body — one big-enough POST is a memory-exhaustion
+  DoS, no exotic payload required. `http.MaxBytesReader` + `statusForBodyErr`
+  (an `errors.As` check against `*http.MaxBytesError`) turns that into a
+  clean `413` instead of an OOM.
+- Both #15 and #16 came straight off the roadmap's own "next up," picked in
+  the previous session's wrap-up — the roadmap file is doing its job as a
+  handoff note to the next session, not just a scoreboard.
+- Goal for next time: nothing hard-committed. Testing (doubles for the OTLP
+  exporter dependency) and system design (how would this actually scale
+  behind a queue) are both still just notes-shaped gaps.
 
 ## 2026-07-02
 - Cleared #12, the goal from last time: a real two-service trace. `client.go`

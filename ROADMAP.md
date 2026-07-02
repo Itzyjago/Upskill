@@ -47,7 +47,9 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 
 ## Cross-cutting
 - 🟡 Testing — the pyramid, table-driven tests, doubles
-- 🟡 Security — injection, authz, secrets, OWASP basics
+- 🟡 Security — injection, authz, secrets, OWASP basics; applied one of these
+  for real (capped an unbounded request body — resource exhaustion), rest is
+  still just notes
 - 🟡 System design — caching, load balancing, queues, scaling
 
 ## Next up
@@ -92,6 +94,6 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 15. ✅ Kubernetes: a HorizontalPodAutoscaler for the deployment — 2-5 replicas,
     70% CPU target; `make kind-metrics-server` covers kind's missing add-on.
 
-### Next up
-16. Security: the `/count` body read is unbounded — cap it, and write up why
-    that's a resource-exhaustion footgun, not just a style nit.
+16. ✅ Security: the `/count` body read was unbounded — `http.MaxBytesReader`
+    caps it at 10MB, `statusForBodyErr` turns a tripped cap into a `413`
+    instead of a generic `400` (`notes/security.md`).

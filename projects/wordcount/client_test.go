@@ -107,6 +107,18 @@ func TestForwardCountHandlerRejectsGET(t *testing.T) {
 	}
 }
 
+func TestForwardCountHandlerRejectsOversizedBody(t *testing.T) {
+	up := newUpstreamClient("http://unused.invalid", nil)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader(strings.Repeat("a", maxCountBodyBytes+1)))
+
+	forwardCountHandler(up)(rec, req)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusRequestEntityTooLarge)
+	}
+}
+
 func TestForwardCountHandlerBadGatewayOnUpstreamDown(t *testing.T) {
 	up := newUpstreamClient("http://127.0.0.1:1", nil) // nothing listens here
 	rec := httptest.NewRecorder()

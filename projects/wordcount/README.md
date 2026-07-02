@@ -21,7 +21,10 @@ curl -s --data-binary "hello world" \
      localhost:8080/count                      # {"lines":0,"words":2,"bytes":11}
 ```
 - `GET /healthz` — cheap readiness/liveness probe, always 200 when serving.
-- `POST /count` — counts the request body, returns a JSON tally.
+- `POST /count` — counts the request body, returns a JSON tally. The body is
+  capped at 10MB (`http.MaxBytesReader`) — an unbounded read is a
+  resource-exhaustion DoS, not just a style nit (roadmap #16,
+  `notes/security.md`). Over the cap → `413`.
 - `GET /metrics` — Prometheus text exposition (see below).
 - Every response carries a `traceparent` header; set `OTEL_EXPORTER_OTLP_ENDPOINT`
   to ship the span to a collector (see Tracing below).

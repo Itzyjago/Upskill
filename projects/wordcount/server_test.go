@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -48,5 +49,25 @@ func TestCountHandlerRejectsGET(t *testing.T) {
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Errorf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
+	}
+}
+
+func TestCountHandlerRejectsOversizedBody(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader(strings.Repeat("a", maxCountBodyBytes+1)))
+
+	countHandler(rec, req)
+
+	if rec.Code != http.StatusRequestEntityTooLarge {
+		t.Errorf("status = %d, want %d", rec.Code, http.StatusRequestEntityTooLarge)
+	}
+}
+
+func TestStatusForBodyErr(t *testing.T) {
+	if got := statusForBodyErr(&http.MaxBytesError{Limit: 10}); got != http.StatusRequestEntityTooLarge {
+		t.Errorf("status = %d, want %d for a MaxBytesError", got, http.StatusRequestEntityTooLarge)
+	}
+	if got := statusForBodyErr(errors.New("boom")); got != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d for any other error", got, http.StatusBadRequest)
 	}
 }
