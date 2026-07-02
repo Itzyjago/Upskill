@@ -76,8 +76,10 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     `/count` to a second wordcount instance wrapped in a client span; the
     compose stack runs both and Jaeger shows a real two-service waterfall.
 
+13. ✅ Add tail sampling at the collector — an OTel Collector now sits between
+    both wordcount instances and Jaeger; `tail_sampling` keeps every errored or
+    >500ms trace and a flat 10% baseline of the rest (`otel-collector.yaml`).
+
 ### Next up
-13. Add tail sampling at the collector so only slow/errored traces are kept —
-    the cost-control half of `notes/distributed-tracing.md` that's still theory.
 14. Grafana alerting vs. Prometheus/Alertmanager — try the same page from
     Grafana's own alert engine and write up where each one fits.

@@ -93,6 +93,24 @@ open http://localhost:16686    # Jaeger — pick "wordcount", the trace has two
   compose, so the two show up as distinct services in Jaeger rather than the
   same service name twice.
 
+### Tail sampling (roadmap #13)
+Both instances now export to an OTel **Collector** (`otel-collector.yaml`)
+instead of Jaeger directly. The collector holds each trace open for
+`decision_wait` (10s) so every span — edge *and* upstream — has landed before
+it decides, then applies (in order): keep it if any span errored, keep it if
+it's slower than 500ms, otherwise keep a flat 10% baseline. See
+`notes/otlp.md` "Sampling: head vs. tail" for why the decision has to happen
+*after* the trace, not per-request in the app.
+```sh
+for i in $(seq 100); do curl -s --data-binary "hello world" localhost:8080/count >/dev/null; done
+open http://localhost:16686    # ~10 traces show up, not 100 — the baseline policy
+                                # dropped the rest, all clean 200s in a few ms
+docker compose -f deploy/observability/docker-compose.yml stop wordcount-upstream
+curl -s --data-binary "hello world" localhost:8080/count   # 502 from forwardCountHandler
+                                # this trace is a guaranteed keeper: the errors policy
+                                # doesn't roll the dice like the baseline one does
+```
+
 ## Test
 ```sh
 go test ./...
