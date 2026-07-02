@@ -1,5 +1,6 @@
-# Kubernetes manifest for wordcount's serve mode — roadmap #4 (deploy + probe).
-# Apply with: kubectl apply -f deploy/k8s.yaml
+# Kubernetes manifest for wordcount's serve mode — roadmap #4 (deploy + probe)
+# and #15 (the HPA at the bottom). Apply with: kubectl apply -f deploy/k8s.yaml
+# The HPA needs metrics-server on the cluster first: `make kind-metrics-server`.
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -78,3 +79,28 @@ spec:
       # Matches deploy/kind.yaml's extraPortMapping so `curl localhost:8080`
       # on the host reaches the Service during a local rollout.
       nodePort: 30080
+---
+# roadmap #15 — the Deployment above ran on kind (#4/#5); this is the
+# "scales" half. Needs metrics-server installed on the cluster first
+# (notes/kubernetes.md) — not there by default on kind.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wordcount
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wordcount
+  minReplicas: 2
+  maxReplicas: 5
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          # The Deployment's requests.cpu (10m) is the denominator for this
+          # percentage — see notes/kubernetes.md "without requests.cpu set,
+          # a CPU-based HPA has nothing to compute a percentage of."
+          averageUtilization: 70

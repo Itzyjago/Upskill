@@ -51,6 +51,12 @@ kind-deploy: kind-load ## Load the image, then apply the manifest and wait for r
 	kubectl apply -f deploy/k8s.yaml
 	kubectl rollout status deploy/$(IMAGE)
 
+.PHONY: kind-metrics-server
+kind-metrics-server: ## Install metrics-server on kind (needed for the HPA, notes/kubernetes.md)
+	kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+	kubectl patch deployment metrics-server -n kube-system --type=json \
+		-p '[{"op":"add","path":"/spec/template/spec/containers/0/args/-","value":"--kubelet-insecure-tls"}]'
+
 .PHONY: kind-down
 kind-down: ## Delete the local kind cluster
 	kind delete cluster --name $(CLUSTER)
