@@ -40,6 +40,27 @@ these are the notes before the code.
 - Stamp the `trace_id` into the slog line so a log and its trace cross-link.
 - Even single-service, a span tree shows handler vs. body-read vs. encode time.
 
+## Server spans vs. client spans
+- Everything above (and `trace.go`) covers the **server** span: the inbound
+  request I *receive*. A single-service trace never needs anything else.
+- The moment wordcount *calls out* to another service, the outbound hop needs
+  its own span, with `kind: CLIENT` instead of `SERVER` (OTLP's span `kind`
+  field, `notes/otlp.md`) — same trace-id, a fresh child span-id, one level
+  deeper in the tree.
+- Propagation on the client side is the mirror image of the server side:
+  - **Server**: *extract* the inbound `traceparent`, mint a child, that child
+    becomes the server span.
+  - **Client**: mint a child of *my* current span, *inject* that child's
+    `traceparent` into the outbound request's headers, before sending it.
+  - The downstream service's server span then extracts what I just injected —
+    my client span's id becomes its parent's id. That's the whole stitch: two
+    services, two spans, one trace, connected by one HTTP header.
+- Concretely: the client span's `parentID` is the *inbound* server span's id
+  (my own request), and the id I inject downstream is the *client* span's id
+  — not the server span's. Get that swapped and the downstream service parents
+  itself to the wrong span, and the waterfall draws a sibling instead of a
+  child.
+
 ## What clicked
 - Propagation is the whole game. Without passing trace context across the call,
   you get disconnected per-service spans, not one trace. The headers are how a
