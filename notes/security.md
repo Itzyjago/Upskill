@@ -28,6 +28,25 @@ Defensive basics for app developers — the stuff that actually bites.
 - SSRF: validate/allow-list outbound URLs the server fetches on user input.
 - Dependency risk: pin versions, run `npm audit` / `govulncheck`, update often.
 
+## Resource exhaustion (the DoS nobody thinks is "security")
+- An **unbounded read** — `io.ReadAll(r.Body)` with no limit — isn't just
+  sloppy, it's a footgun: one request with a multi-GB body (or a body that
+  never ends) can OOM the process before any application logic runs. It's the
+  memory-exhaustion sibling of an injection bug: untrusted input controls a
+  resource the server should own.
+- `http.MaxBytesReader(w, r.Body, limit)` (Go's stdlib answer) wraps the body
+  so a read past `limit` fails fast with an error instead of buffering
+  forever. Cheap insurance — one line at the boundary, applies whether the
+  handler is `count`-ing 12 bytes or a `io.ReadAll` of arbitrary size.
+- This is a **boundary** control, same category as parameterized queries and
+  output encoding above: the size cap belongs where untrusted bytes first
+  enter the process (the handler), not scattered through downstream code that
+  assumes a well-behaved caller.
+- Applies to slice/map growth from user input too, not just body reads — same
+  shape of bug: "the size of this resource is attacker-controlled and
+  unbounded" is the actual vulnerability, HTTP bodies are just the most common
+  door it walks in through.
+
 ## Mindset
 - Validate input at the boundary; treat all external data as hostile.
 - Fail closed (deny on error), log security events, don't leak details in errors.
