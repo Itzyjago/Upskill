@@ -1,0 +1,49 @@
+# A Grafana-native mirror of rules/alerts.yml's HighErrorRate — same PromQL,
+# same threshold, evaluated by Grafana's own alerting engine instead of
+# Prometheus. Not meant to run alongside the Prometheus rule in a real setup
+# (see notes/grafana.md); it's here to compare the two provisioning shapes
+# side by side, roadmap #14.
+apiVersion: 1
+groups:
+  - orgId: 1
+    name: wordcount-golden-signals
+    folder: wordcount
+    interval: 1m
+    rules:
+      - uid: wordcount-high-error-rate-grafana
+        title: "HighErrorRate (Grafana-native)"
+        # Query A reads the exact same recorded series the Prometheus rule and
+        # the dashboard panel do (rules/recording.yml) — same question asked
+        # by a second engine, not a second, drifting copy of the PromQL.
+        data:
+          - refId: A
+            datasourceUid: prometheus
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              refId: A
+              expr: job:http_requests:error_ratio5m
+              instant: true
+          - refId: C
+            datasourceUid: __expr__
+            relativeTimeRange:
+              from: 300
+              to: 0
+            model:
+              refId: C
+              type: threshold
+              expression: A
+              conditions:
+                - evaluator:
+                    type: gt
+                    params: [0.05]
+        condition: C
+        for: 2m
+        noDataState: NoData
+        execErrState: Error
+        labels:
+          severity: page
+        annotations:
+          summary: "wordcount 5xx error ratio above 5% (Grafana-native)"
+          description: "Mirrors rules/alerts.yml's HighErrorRate — see notes/grafana.md."

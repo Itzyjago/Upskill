@@ -1,0 +1,15 @@
+# Grafana's routing tree — the direct analog of alertmanager.yml's `route`.
+# Same shape: match on the severity label, send page-severity alerts to the
+# oncall contact point. See notes/grafana.md, roadmap #14.
+apiVersion: 1
+policies:
+  - orgId: 1
+    receiver: wordcount-webhook-oncall
+    group_by: ["alertname"]
+    group_wait: 10s
+    group_interval: 1m
+    repeat_interval: 1h
+    routes:
+      - receiver: wordcount-webhook-oncall
+        object_matchers:
+          - ["severity", "=", "page"]

@@ -1,0 +1,15 @@
+# Grafana-native contact point — the same webhook sink Alertmanager already
+# routes to (deploy/observability/alertmanager.yml's webhook-oncall), so a
+# Grafana-fired alert lands in the exact same place, comparing the two
+# alerting paths on equal footing. See notes/grafana.md "Grafana alerting vs.
+# Prometheus rules + Alertmanager", roadmap #14.
+apiVersion: 1
+contactPoints:
+  - orgId: 1
+    name: wordcount-webhook-oncall
+    receivers:
+      - uid: wordcount-webhook-oncall-receiver
+        type: webhook
+        settings:
+          url: http://alertsink:9094/
+          httpMethod: POST

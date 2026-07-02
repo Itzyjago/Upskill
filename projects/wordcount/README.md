@@ -60,6 +60,12 @@ make obs-down        # tear it all down
   `deploy/observability/rules/`.
 - Grafana is provisioned (datasource + dashboard) from
   `deploy/observability/grafana/` — no manual clicking, it's all in git.
+- Grafana Alerting tab also shows `HighErrorRate (Grafana-native)` — a second,
+  Grafana-evaluated copy of the same Prometheus alert, provisioned from
+  `grafana/provisioning/alerting/`, routed to the same webhook sink. It's there
+  to compare Grafana's alert rule / contact point / notification policy shape
+  against Prometheus rule / receiver / route (roadmap #14,
+  `notes/grafana.md`) — a real setup should pick one, not run both.
 
 ## Tracing (OTLP → Jaeger)
 The stack also runs Jaeger, and the app ships a span per request to it via a
