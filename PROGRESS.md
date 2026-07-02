@@ -43,9 +43,17 @@ A running journal — newest first. One short entry per session.
 - Both #15 and #16 came straight off the roadmap's own "next up," picked in
   the previous session's wrap-up — the roadmap file is doing its job as a
   handoff note to the next session, not just a scoreboard.
-- Goal for next time: nothing hard-committed. Testing (doubles for the OTLP
-  exporter dependency) and system design (how would this actually scale
-  behind a queue) are both still just notes-shaped gaps.
+- Closed the loop on one more thing before stopping: wrote up
+  `notes/testing.md` "the fake-collector-shaped hole" — `upstreamClient` gets
+  tested with a real `httptest.NewServer` fake, but `otlpExporter` is just
+  nil'd out everywhere, which proves the request path works and nothing about
+  whether export itself fires correctly. Didn't fix it — the export call is a
+  fire-and-forget goroutine (`middleware.go`), so a real fix means giving it a
+  way to synchronize with a test, not just swapping in a fake. Queued as #17.
+- Goal for next time: #17 (make the export goroutine testable) or #18 (write
+  up how wordcount would scale past one edge + one upstream) — either is a
+  reasonable next session, picking whichever feels more interesting to start
+  with.
 
 ## 2026-07-02
 - Cleared #12, the goal from last time: a real two-service trace. `client.go`

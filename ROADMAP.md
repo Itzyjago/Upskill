@@ -97,3 +97,13 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 16. ✅ Security: the `/count` body read was unbounded — `http.MaxBytesReader`
     caps it at 10MB, `statusForBodyErr` turns a tripped cap into a `413`
     instead of a generic `400` (`notes/security.md`).
+
+### Next up
+17. Testing: the OTLP export goroutine (`middleware.go`) is currently
+    untestable — `otlpExporter` is just nil'd out in every test, an escape
+    hatch, not a double (`notes/testing.md` "the fake-collector-shaped hole").
+    Give it a real fake and assert export actually happens.
+18. System design: write up how wordcount would actually scale past one
+    edge + one upstream — a queue in front of the forward hop, or a real load
+    balancer instead of a single hardcoded `WORDCOUNT_UPSTREAM_URL`. Still
+    just notes for this whole bullet; time to make it concrete.
