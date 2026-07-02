@@ -111,12 +111,15 @@ func isAllZero(s string) bool {
 
 // span is a *timed* unit of work within a trace: the spanContext (trace/span ids
 // + sampled) plus the bits a backend needs to draw a waterfall — the parent's
-// span id, a name, start/end, and whether it failed. trace.go propagates ids;
-// this is the timing half that otlp.go exports. See notes/otlp.md.
+// span id, a name, start/end, whether it failed, and its OTLP kind (SERVER for
+// an inbound request, CLIENT for an outbound call — notes/distributed-tracing.md
+// "server spans vs. client spans"). trace.go propagates ids; this is the timing
+// half that otlp.go exports. See notes/otlp.md.
 type span struct {
 	sc       spanContext
-	parentID string // the inbound parent's span id; "" makes this a root span
+	parentID string // the parent's span id; "" makes this a root span
 	name     string
+	kind     int // OTLP SpanKind — spanKindServer or spanKindClient (otlp.go)
 	start    time.Time
 	end      time.Time
 	failed   bool
@@ -129,9 +132,18 @@ type span struct {
 // clock.
 func startServerSpan(traceparent, name string, now time.Time) span {
 	if parent, ok := parseTraceparent(traceparent); ok {
-		return span{sc: parent.child(), parentID: parent.spanID, name: name, start: now}
+		return span{sc: parent.child(), parentID: parent.spanID, name: name, kind: spanKindServer, start: now}
 	}
-	return span{sc: newSpanContext(), name: name, start: now}
+	return span{sc: newSpanContext(), name: name, kind: spanKindServer, start: now}
+}
+
+// startClientSpan begins a client span for an outbound call made *while
+// handling* the span identified by parent (typically the current request's
+// server span, pulled from the context via spanFrom). The returned span's own
+// id — not the parent's — is what gets injected into the outbound request's
+// traceparent, making this span the downstream service's parent.
+func startClientSpan(parent spanContext, name string, now time.Time) span {
+	return span{sc: parent.child(), parentID: parent.spanID, name: name, kind: spanKindClient, start: now}
 }
 
 // finish stamps the end time (and outcome) and returns the completed span, ready

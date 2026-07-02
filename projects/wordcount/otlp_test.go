@@ -14,6 +14,7 @@ func testSpan(failed bool, parentID string) span {
 		sc:       spanContext{traceID: validTrace, spanID: validSpan, sampled: true},
 		parentID: parentID,
 		name:     "POST /count",
+		kind:     spanKindServer,
 		start:    time.Unix(0, 1000),
 		end:      time.Unix(0, 5000),
 		failed:   failed,

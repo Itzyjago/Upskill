@@ -75,7 +75,8 @@ type otlpAnyValue struct {
 }
 
 const (
-	spanKindServer  = 2 // OTLP SpanKind.SERVER
+	spanKindServer  = 2 // OTLP SpanKind.SERVER — an inbound request
+	spanKindClient  = 3 // OTLP SpanKind.CLIENT — an outbound call we made
 	statusCodeUnset = 0 // leave success UNSET, per OTel HTTP semconv
 	statusCodeError = 2 // ERROR
 )
@@ -98,7 +99,7 @@ func (e *otlpExporter) payloadFor(s span, attrs []kv) otlpPayload {
 				SpanID:            s.sc.spanID,
 				ParentSpanID:      s.parentID,
 				Name:              s.name,
-				Kind:              spanKindServer,
+				Kind:              s.kind,
 				StartTimeUnixNano: nano(s.start),
 				EndTimeUnixNano:   nano(s.end),
 				Attributes:        toAttrs(attrs),
