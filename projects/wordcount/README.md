@@ -43,7 +43,14 @@ curl -s localhost:8080/metrics
 - **gauge** `http_requests_in_flight` — requests being served right now.
 
 See `deploy/` for the Kubernetes manifest that wires `/healthz` to a probe and
-annotates the pod for Prometheus scraping.
+annotates the pod for Prometheus scraping. It also defines a
+HorizontalPodAutoscaler (2-5 replicas, 70% CPU) — roadmap #15. On kind that
+needs metrics-server, which isn't installed by default:
+```sh
+make kind-up kind-metrics-server kind-deploy
+kubectl get hpa wordcount   # TARGETS shows a real percentage once metrics-server is up,
+                             # not <unknown>
+```
 
 ## Observability stack (Prometheus + Grafana)
 `deploy/observability/` is a docker-compose stack that actually scrapes the

@@ -27,8 +27,9 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 - 🟢 Observability — all three pillars *exported*: `/metrics`, structured slog,
   and real OTLP spans shipped to Jaeger (hand-rolled OTLP/HTTP, no SDK) — an
   actual waterfall, not just a propagated `traceparent`
-- 🟡 Kubernetes — pods, deployments, services, probes (ran the manifest on a
-  local kind cluster)
+- 🟢 Kubernetes — pods, deployments, services, probes (ran the manifest on a
+  local kind cluster), and a HorizontalPodAutoscaler (needs metrics-server,
+  not installed on kind by default)
 - 🟢 Health checks — liveness vs readiness vs startup probes (watched readiness
   gate a rollout on kind)
 - 🟢 Prometheus — metric types, exposition format, PromQL, recording rules, *and*
@@ -88,8 +89,9 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     notification policy) next to the Prometheus/Alertmanager original; same
     shape, different engine — `notes/grafana.md`.
 
+15. ✅ Kubernetes: a HorizontalPodAutoscaler for the deployment — 2-5 replicas,
+    70% CPU target; `make kind-metrics-server` covers kind's missing add-on.
+
 ### Next up
-15. Kubernetes: a HorizontalPodAutoscaler for the deployment — the "runs" part
-    of the roadmap bullet is done, the "scales" part isn't.
 16. Security: the `/count` body read is unbounded — cap it, and write up why
     that's a resource-exhaustion footgun, not just a style nit.
