@@ -51,8 +51,10 @@ func (u *upstreamClient) count(ctx context.Context, body []byte) (counts, error)
 	failed := err != nil
 	if err == nil {
 		defer func() { _ = resp.Body.Close() }()
-		failed = resp.StatusCode >= 500
-		if decErr := json.NewDecoder(resp.Body).Decode(&c); decErr != nil {
+		if resp.StatusCode/100 != 2 {
+			err = fmt.Errorf("upstream returned %s", resp.Status)
+			failed = true
+		} else if decErr := json.NewDecoder(resp.Body).Decode(&c); decErr != nil {
 			err = decErr
 			failed = true
 		}
