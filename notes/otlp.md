@@ -57,6 +57,31 @@ ResourceSpans      // one per service — carries the Resource (service.name, ..
 - **Best-effort, like propagation.** A collector that's down must never fail a
   request. Swallow the export error (log at debug) and move on.
 
+## Sampling: head vs. tail
+Exporting *every* span (what wordcount does right now) is fine at toy traffic;
+at real volume it's too much data and too much cost. Sampling picks a subset
+to keep — but *when* you decide matters as much as *how many*.
+- **Head sampling** — decide at the **start** of the trace, before any span
+  exists. Cheap (a coin flip per trace-id, or a rate), and every service
+  downstream can make the *same* decision independently just by hashing the
+  trace-id — no coordination needed. The catch: you decide before you know
+  anything happened. A trace that's about to error or blow the p99 gets
+  dropped exactly as often as a boring 200 in 2ms.
+- **Tail sampling** — decide at the **end**, once every span in the trace has
+  landed. Now the decision can be "keep it if it errored, or if it was slow,
+  or 1% of everything else" — the interesting traces are the ones sampling
+  is *supposed* to protect, not the ones it drops by chance.
+- The cost of tail sampling: you can't decide per-span in the app anymore. All
+  of a trace's spans have to reach one place *before* the keep/drop call, so it
+  needs a **buffering collector** — hold spans for a window (e.g. 10s), wait
+  for the trace to look complete, then decide. That's what the OTel
+  **Collector**'s `tail_sampling` processor does; it sits between the app and
+  the backend for exactly this reason (roadmap #13).
+- Head is simple and horizontally scales trivially (every instance decides
+  alone); tail needs a stateful hop but keeps the traces that actually matter.
+  wordcount currently does neither — it exports 100% of spans, which is really
+  "sample rate 1" head sampling, the trivial case.
+
 ## What clicked
 - The `traceId`/`spanId`/`parentSpanId` in the OTLP payload are *literally* the
   ids `trace.go` already mints for the `traceparent`. The header was always
