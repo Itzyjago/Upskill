@@ -37,7 +37,9 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 - 🟢 Alerting — Prometheus rules + the `for:` window, and Alertmanager routing a
   page to a real webhook receiver (grouping, inhibition, the routing tree)
 - 🟢 Distributed tracing — W3C trace context propagation + OTLP/HTTP export to
-  Jaeger; spans carry timings, the log line cross-links via `trace_id`
+  Jaeger; spans carry timings, the log line cross-links via `trace_id`; a real
+  two-service trace (client span forwards to a second instance, server span on
+  the far side parents to it)
 
 ## Cross-cutting
 - 🟡 Testing — the pyramid, table-driven tests, doubles
@@ -70,9 +72,11 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     (`job:...` series); the alerts and the error-ratio panel read them so the
     dashboard and the alert can't drift apart.
 
+12. ✅ Export real OTLP spans for the *outbound* hop too — `client.go` forwards
+    `/count` to a second wordcount instance wrapped in a client span; the
+    compose stack runs both and Jaeger shows a real two-service waterfall.
+
 ### Next up
-12. Export real OTLP spans for the *outbound* hop too — make wordcount call a
-    second instance of itself and watch a two-service trace stitch in Jaeger.
 13. Add tail sampling at the collector so only slow/errored traces are kept —
     the cost-control half of `notes/distributed-tracing.md` that's still theory.
 14. Grafana alerting vs. Prometheus/Alertmanager — try the same page from

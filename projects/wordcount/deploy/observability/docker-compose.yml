@@ -1,14 +1,16 @@
-# Local observability stack for wordcount — roadmap #8 + #9.
-# Brings up the app, Prometheus (scraping /metrics), Grafana (dashboards), and
-# Jaeger (traces) so all three pillars are live against real traffic: the
-# golden-signals PromQL from notes/promql.md, and the OTLP spans from notes/otlp.md.
+# Local observability stack for wordcount — roadmap #8 + #9 + #12.
+# Brings up two wordcount instances (edge + upstream), Prometheus (scraping
+# /metrics), Grafana (dashboards), and Jaeger (traces) so all three pillars are
+# live against real traffic: the golden-signals PromQL from notes/promql.md,
+# and the OTLP spans from notes/otlp.md.
 #
 #   docker compose -f deploy/observability/docker-compose.yml up --build -d
-#   # generate some traffic:
+#   # generate some traffic — every request now hops edge -> upstream:
 #   for i in $(seq 100); do curl -s --data-binary "hello world" localhost:8080/count >/dev/null; done
 #   open http://localhost:3000    # Grafana — anonymous viewer, dashboard auto-loads
 #   open http://localhost:9090    # Prometheus — Status > Targets shows wordcount UP
-#   open http://localhost:16686   # Jaeger — pick service "wordcount" to see the waterfall
+#   open http://localhost:16686   # Jaeger — pick service "wordcount", find a trace:
+#                                  # two spans, two services (wordcount -> wordcount-upstream)
 #   open http://localhost:9093    # Alertmanager — firing/grouped alerts and silences
 #   # watch a routed alert land at the webhook sink:
 #   docker compose -f deploy/observability/docker-compose.yml logs -f alertsink
@@ -16,6 +18,9 @@
 # Tear down with: docker compose -f deploy/observability/docker-compose.yml down
 services:
   wordcount:
+    # The "edge" instance — the one curl hits. Forwards every /count to
+    # wordcount-upstream instead of counting locally (WORDCOUNT_UPSTREAM_URL,
+    # client.go), so the trace has a real second hop — roadmap #12.
     build:
       context: ../..          # the wordcount project root (where the Dockerfile lives)
     command: ["-serve", ":8080"]
@@ -23,8 +28,24 @@ services:
       # Turns on the hand-rolled OTLP exporter (otlp.go) and points it at Jaeger's
       # OTLP/HTTP ingest. Unset = spans are still timed and logged, just not shipped.
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_SERVICE_NAME=wordcount
+      - WORDCOUNT_UPSTREAM_URL=http://wordcount-upstream:8080/count
     ports:
       - "8080:8080"
+    depends_on:
+      - jaeger
+      - wordcount-upstream
+
+  wordcount-upstream:
+    # The leaf: same image, same binary, just no WORDCOUNT_UPSTREAM_URL of its
+    # own, so it counts locally and returns. No published port — only the edge
+    # instance reaches it, over the compose network.
+    build:
+      context: ../..
+    command: ["-serve", ":8080"]
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4318
+      - OTEL_SERVICE_NAME=wordcount-upstream
     depends_on:
       - jaeger
 

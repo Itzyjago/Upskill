@@ -2,6 +2,27 @@
 
 A running journal — newest first. One short entry per session.
 
+## 2026-07-02
+- Cleared #12, the goal from last time: a real two-service trace. `client.go`
+  adds `upstreamClient` — wraps an outbound `/count` call in a **client** span
+  (`kind` finally travels through `otlp.go` instead of every span being
+  hardcoded SERVER), mints a child of whatever's in `ctx`, and injects *that
+  child's* id — not its own parent's — into the outbound `traceparent`. Wired
+  in via `WORDCOUNT_UPSTREAM_URL` (env, same pattern as the OTLP endpoint) so
+  compose can run an "edge" instance forwarding to an "upstream" one; each
+  gets its own `OTEL_SERVICE_NAME` so Jaeger's dropdown shows two real
+  services, not one instance twice.
+- Also fixed a real bug sitting in the repo: `trace_test.go` was calling
+  `newMux` with one argument after a prior commit added the exporter param —
+  it's been failing to compile. Caught it while reading the code before
+  starting #12; two-line fix.
+- What clicked: server spans *extract* a parent and mint a child; client spans
+  mint a child and *inject* it. Same operation, opposite direction — the id
+  that goes out on the wire is always "my new span," never "the span I got."
+  Mixing that up is the one way to make Jaeger draw a sibling instead of a
+  child.
+- Goal for next time: tail sampling at the collector (#13).
+
 ## 2026-06-29
 - Extended the observability arc — cleared the three open "next up" goals (#9–11),
   all in the project's hand-rolled, no-SDK spirit.

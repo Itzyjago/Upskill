@@ -62,12 +62,20 @@ func serve(addr string) error {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	m := newMetrics()
 
+	// service.name is also a standard OTel env var — set it per instance
+	// (compose gives the edge and the upstream different values) so Jaeger's
+	// service dropdown actually shows two services, not one instance twice.
+	service := "wordcount"
+	if s := os.Getenv("OTEL_SERVICE_NAME"); s != "" {
+		service = s
+	}
+
 	// Span export is opt-in via the standard OTel env var. Unset → tr stays nil
 	// and we skip export; spans are still timed and logged. See notes/otlp.md.
 	var tr *otlpExporter
 	if ep := os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT"); ep != "" {
-		tr = newOTLPExporter(ep, "wordcount")
-		slog.Info("otlp export enabled", "endpoint", ep)
+		tr = newOTLPExporter(ep, service)
+		slog.Info("otlp export enabled", "endpoint", ep, "service", service)
 	}
 
 	// Set on the "edge" instance only — it forwards /count to another

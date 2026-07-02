@@ -76,6 +76,23 @@ open http://localhost:16686    # Jaeger — pick service "wordcount", find trace
 - It's best-effort and off the hot path: a collector that's down never fails or
   slows a request (`notes/otlp.md`).
 
+### Two-service trace (roadmap #12)
+The compose stack runs a second wordcount instance (`wordcount-upstream`). Set
+`WORDCOUNT_UPSTREAM_URL` on an instance and its `/count` **forwards** the
+request there instead of counting locally — `client.go` wraps the outbound
+call in a client span and injects its own id into the traceparent it sends, so
+the upstream's server span parents to *that*, not to the original caller. One
+request, two services, one trace:
+```sh
+curl -s --data-binary "hello world" localhost:8080/count   # hits the edge instance
+open http://localhost:16686    # Jaeger — pick "wordcount", the trace has two
+                                # spans: wordcount (SERVER) -> wordcount-upstream (SERVER),
+                                # joined by wordcount's CLIENT span in between
+```
+- `OTEL_SERVICE_NAME` (also a standard OTel env var) is set per instance in
+  compose, so the two show up as distinct services in Jaeger rather than the
+  same service name twice.
+
 ## Test
 ```sh
 go test ./...
