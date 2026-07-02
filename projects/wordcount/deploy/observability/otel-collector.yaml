@@ -1,0 +1,51 @@
+# OpenTelemetry Collector config — sits between wordcount and Jaeger so tail
+# sampling can look at a *whole* trace (every span from both services) before
+# deciding to keep or drop it. See notes/otlp.md "Sampling: head vs. tail" and
+# roadmap #13. Not wired into the app yet — that's the next commit.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  # decision_wait is how long the collector holds a trace open waiting for
+  # every span to arrive (both wordcount and wordcount-upstream) before it
+  # applies the policies below and either forwards or drops the whole trace.
+  tail_sampling:
+    decision_wait: 10s
+    policies:
+      # Always keep a trace that has an errored span anywhere in it — the
+      # exact case head sampling would drop just as often as a clean 200.
+      - name: errors
+        type: status_code
+        status_code:
+          status_codes: [ERROR]
+      # Always keep anything slower than wordcount's own p95 alert threshold
+      # (rules/alerts.yml's HighLatencyP95, 500ms) — see it before Prometheus
+      # would even fire.
+      - name: slow
+        type: latency
+        latency:
+          threshold_ms: 500
+      # Everything else: keep a flat 10% so the "boring" traffic still has
+      # *some* representation in Jaeger, without shipping every span.
+      - name: baseline
+        type: probabilistic
+        probabilistic:
+          sampling_percentage: 10
+
+exporters:
+  otlp:
+    endpoint: jaeger:4317
+    tls:
+      insecure: true # local-only stack, no certs to manage
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [tail_sampling]
+      exporters: [otlp]

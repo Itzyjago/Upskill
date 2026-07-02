@@ -56,7 +56,18 @@ services:
       - COLLECTOR_OTLP_ENABLED=true   # accept OTLP on :4317 (gRPC) and :4318 (HTTP)
     ports:
       - "16686:16686"  # Jaeger UI
-      - "4318:4318"    # OTLP/HTTP — where otlp.go POSTs /v1/traces
+      - "4318:4318"    # OTLP/HTTP — where otlp.go POSTs /v1/traces directly today
+
+  otel-collector:
+    # Sits between the app and Jaeger so tail sampling (deployed but not yet
+    # wired into the app — next commit) has a place to buffer a whole trace
+    # before deciding to keep or drop it. See otel-collector.yaml, roadmap #13.
+    image: otel/opentelemetry-collector-contrib:0.105.0
+    command: ["--config=/etc/otel-collector.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otel-collector.yaml:ro
+    depends_on:
+      - jaeger
 
   prometheus:
     image: prom/prometheus:v2.53.0
