@@ -7,10 +7,10 @@ import (
 
 func TestCount(t *testing.T) {
 	tests := []struct {
-		name           string
-		in             string
-		lines, words   int
-		bytes          int
+		name         string
+		in           string
+		lines, words int
+		bytes        int
 	}{
 		{"empty", "", 0, 0, 0},
 		{"one word no newline", "hello", 0, 1, 5},

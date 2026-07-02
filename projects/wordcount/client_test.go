@@ -60,7 +60,7 @@ func TestUpstreamClientNoParentStartsFreshTrace(t *testing.T) {
 }
 
 func TestUpstreamClientErrorsOnUpstreamFailure(t *testing.T) {
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)
 	}))
 	defer upstream.Close()
@@ -72,7 +72,7 @@ func TestUpstreamClientErrorsOnUpstreamFailure(t *testing.T) {
 }
 
 func TestForwardCountHandlerReturnsUpstreamTally(t *testing.T) {
-	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(counts{Lines: 0, Words: 2, Bytes: 11})
 	}))
 	defer upstream.Close()

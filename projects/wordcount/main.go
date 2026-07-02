@@ -79,7 +79,7 @@ func main() {
 		showL, showW, showC = true, true, true
 	}
 
-	print := func(name string, c counts) {
+	printRow := func(name string, c counts) {
 		if showL {
 			fmt.Printf("%8d", c.Lines)
 		}
@@ -102,7 +102,7 @@ func main() {
 			fmt.Fprintln(os.Stderr, "wc:", err)
 			os.Exit(1)
 		}
-		print("", c)
+		printRow("", c)
 		return
 	}
 
@@ -122,13 +122,13 @@ func main() {
 			exit = 1
 			continue
 		}
-		print(name, c)
+		printRow(name, c)
 		total.Lines += c.Lines
 		total.Words += c.Words
 		total.Bytes += c.Bytes
 	}
 	if len(files) > 1 {
-		print("total", total)
+		printRow("total", total)
 	}
 	os.Exit(exit)
 }

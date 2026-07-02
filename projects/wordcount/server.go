@@ -31,7 +31,7 @@ func newMux(m *metrics, tr *otlpExporter, up *upstreamClient) *http.ServeMux {
 }
 
 // healthHandler is the readiness/liveness probe target — cheap and dependency-free.
-func healthHandler(w http.ResponseWriter, r *http.Request) {
+func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write([]byte("ok\n"))
