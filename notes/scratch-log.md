@@ -9,3 +9,4 @@
 - misc: PROGRESS.md is getting long, might split it eventually
 - idea: try writing a small Prometheus recording rule from scratch as practice
 - reminder: double check semver notes against real release tags
+- todo: revisit regex notes, some of the lookaheads examples felt rushed
