@@ -6,3 +6,4 @@
 - reminder: check if MaxBytesReader pattern is worth reusing elsewhere
 - todo: read up more on Alertmanager routing trees, only skimmed so far
 - random thought: distributed tracing notes could use a diagram at some point
+- misc: PROGRESS.md is getting long, might split it eventually
