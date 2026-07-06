@@ -1,1 +1,2 @@
 - random thought: keep a running scratch pad for half-formed ideas before they go into real notes
+- reminder: revisit the OTel collector config once tail sampling notes are fleshed out
