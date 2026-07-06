@@ -1,0 +1,1 @@
+- random thought: keep a running scratch pad for half-formed ideas before they go into real notes
