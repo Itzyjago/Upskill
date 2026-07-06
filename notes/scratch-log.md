@@ -2,3 +2,4 @@
 - reminder: revisit the OTel collector config once tail sampling notes are fleshed out
 - todo: skim through the k8s HPA docs again, the metrics-server bit was fuzzy
 - idea: maybe a short note comparing head vs tail sampling tradeoffs in practice
+- misc: golangci-lint bump caught more than expected, worth a deeper look later
