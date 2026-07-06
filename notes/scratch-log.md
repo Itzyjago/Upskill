@@ -7,3 +7,4 @@
 - todo: read up more on Alertmanager routing trees, only skimmed so far
 - random thought: distributed tracing notes could use a diagram at some point
 - misc: PROGRESS.md is getting long, might split it eventually
+- idea: try writing a small Prometheus recording rule from scratch as practice
