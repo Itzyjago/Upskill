@@ -11,3 +11,4 @@
 - reminder: double check semver notes against real release tags
 - todo: revisit regex notes, some of the lookaheads examples felt rushed
 - misc: SQL indexing notes need a follow-up on composite indexes
+- random thought: system-design notes could use a caching section
