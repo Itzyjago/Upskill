@@ -4,3 +4,4 @@
 - idea: maybe a short note comparing head vs tail sampling tradeoffs in practice
 - misc: golangci-lint bump caught more than expected, worth a deeper look later
 - reminder: check if MaxBytesReader pattern is worth reusing elsewhere
+- todo: read up more on Alertmanager routing trees, only skimmed so far
