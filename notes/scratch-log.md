@@ -12,3 +12,4 @@
 - todo: revisit regex notes, some of the lookaheads examples felt rushed
 - misc: SQL indexing notes need a follow-up on composite indexes
 - random thought: system-design notes could use a caching section
+- todo: come back and tidy this scratch log once it gets too messy
