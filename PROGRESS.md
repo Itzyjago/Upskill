@@ -35,6 +35,31 @@ session gets slower than just scrolling.
 - Goal for next time: apply the #18 load-balancer verdict for real — scale
   the upstream Deployment's replicas and confirm the Service actually
   spreads `/count` traffic, not just gates rollouts.
+- **Later the same session**: kept going and actually cleared the scratch
+  log instead of letting it grow forever. Turned every resolvable item into
+  real work — HPA's actual asymmetry (scale-up 0s vs scale-down 300s
+  stabilization, not metrics-server), Alertmanager's routing tree traced
+  against the real config (both receivers point at the same sink, so the
+  webhook payload alone can't prove routing worked), regex lookarounds
+  verified against a real engine plus the Go/RE2 trap, a composite-index
+  follow-up, and a from-scratch recording rule (now wired into the Grafana
+  panel that used to recompute it live every refresh).
+- Ran a proper reuse audit instead of assuming the `/count` body cap (#16)
+  had propagated: it hadn't. `webhook.go`'s alert sink and `client.go`'s
+  upstream response decode were both still unbounded — same bug, two more
+  places, both now capped and covered by tests. Along the way learned
+  `errors.As(err, *http.MaxBytesError)` doesn't reliably survive
+  `json.NewDecoder` — depends on exactly where the cap trips.
+- Filled in the roadmap's remaining thin spots: Python packaging, a real
+  hash map traced in `metrics.go` (not a kata), `set -e`'s actual exemptions
+  (verified against a real shell), a phony-target dependency chain from the
+  real Makefile, `/count`'s idempotency worked through properly, and why
+  TLS 1.3 dropped a round trip (plus what 0-RTT actually costs — the same
+  idempotency question one layer down the stack).
+- What clicked, round two: "go back and actually check" beat "assume it's
+  fine" every time it got applied today — the golangci-lint pin, the
+  MaxBytesReader reuse gap, and the stale otel-collector.yaml comment were
+  all things a quick re-read caught that pure recall wouldn't have.
 
 ## 2026-07-03
 - Closed both remaining tracing "next up" goals.
