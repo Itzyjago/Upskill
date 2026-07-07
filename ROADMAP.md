@@ -103,7 +103,23 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     double. `middleware_test.go`'s `fakeCollector` (an `httptest.Server` that
     signals a channel on receipt) now asserts export actually happens, no
     production code changed (`notes/testing.md`).
-18. System design: write up how wordcount would actually scale past one
-    edge + one upstream — a queue in front of the forward hop, or a real load
-    balancer instead of a single hardcoded `WORDCOUNT_UPSTREAM_URL`. Still
-    just notes for this whole bullet; time to make it concrete.
+18. ✅ System design: wordcount past one edge + one upstream is a **load
+    balancer** problem, not a queue one — `/count` is synchronous
+    request/response, so decoupling with a queue means either blocking
+    anyway or changing the API contract; multiple upstream replicas behind
+    one address doesn't (`notes/system-design.md`).
+
+### Next up
+19. Actually apply the load-balancer verdict from #18 — `deploy/k8s.yaml`'s
+    upstream is still one Service backing one Deployment; scale replicas and
+    confirm the Service's built-in load balancing (kube-proxy) spreads
+    `/count` traffic across pods, not just liveness/readiness gating a
+    rollout.
+20. Data structures: the roadmap has said 🟡 "revisit trees and hash maps"
+    for two weeks without a revisit. Pick one real use in wordcount or a
+    kata and stop letting it sit.
+21. HTTP: idempotency notes are still abstract — `/count` is a POST with no
+    idempotency key; work out what an idempotent version of it would even
+    look like (probably: none, it's a pure function of the body) versus
+    `forwardCountHandler`'s retries, which *aren't* currently safe to retry
+    blindly on a network error (could double-count upstream-side metrics).
