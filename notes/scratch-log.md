@@ -1,1 +1,2 @@
 - random thought: keep a running scratch pad for half-formed ideas before they go into real notes
+- todo: actually apply the load-balancer verdict from #18 — scale deploy/k8s.yaml's upstream replicas and watch kube-proxy spread /count traffic for real, not just reason about it
