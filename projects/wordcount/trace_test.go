@@ -84,7 +84,7 @@ func TestMiddlewarePropagatesTrace(t *testing.T) {
 	req.Header.Set("traceparent", in)
 
 	rec := httptest.NewRecorder()
-	newMux(newMetrics(), nil, nil).ServeHTTP(rec, req) // nil exporter, nil upstream
+	newMux(newMetrics(), nil, nil, nil).ServeHTTP(rec, req) // nil exporter, nil upstream
 
 	out, ok := parseTraceparent(rec.Header().Get("traceparent"))
 	if !ok {
@@ -103,7 +103,7 @@ func TestMiddlewareStartsFreshTrace(t *testing.T) {
 	// No inbound traceparent → a brand-new root trace, still a valid header out.
 	req := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader("hi"))
 	rec := httptest.NewRecorder()
-	newMux(newMetrics(), nil, nil).ServeHTTP(rec, req) // nil exporter, nil upstream
+	newMux(newMetrics(), nil, nil, nil).ServeHTTP(rec, req) // nil exporter, nil upstream
 
 	if _, ok := parseTraceparent(rec.Header().Get("traceparent")); !ok {
 		t.Errorf("no inbound trace: response traceparent %q is not valid", rec.Header().Get("traceparent"))

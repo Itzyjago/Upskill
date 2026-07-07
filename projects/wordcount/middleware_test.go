@@ -58,7 +58,7 @@ func TestInstrumentExportsSpanToCollector(t *testing.T) {
 	defer fc.Close()
 
 	tr := newOTLPExporter(fc.URL, "wordcount")
-	mux := newMux(newMetrics(), tr, nil)
+	mux := newMux(newMetrics(), tr, nil, nil)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader("hello world\n"))
@@ -105,7 +105,7 @@ func TestInstrumentSkipsExportWhenDisabled(t *testing.T) {
 	defer fc.Close()
 
 	tr := newOTLPExporter(fc.URL, "wordcount")
-	mux := newMux(newMetrics(), tr, nil)
+	mux := newMux(newMetrics(), tr, nil, nil)
 
 	// Confirm the collector is reachable and instrumented requests do export
 	// (same assertion as the test above, kept minimal) before trusting silence
@@ -115,7 +115,7 @@ func TestInstrumentSkipsExportWhenDisabled(t *testing.T) {
 	mux.ServeHTTP(rec, req)
 	fc.waitForSpan(t) // drain the warmup export
 
-	disabled := newMux(newMetrics(), nil, nil)
+	disabled := newMux(newMetrics(), nil, nil, nil)
 	rec2 := httptest.NewRecorder()
 	req2 := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader("hi\n"))
 	disabled.ServeHTTP(rec2, req2)

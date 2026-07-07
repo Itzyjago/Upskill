@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -30,11 +32,13 @@ func statusForBodyErr(err error) int {
 
 // newMux wires the HTTP routes. Split out so tests can exercise the handlers
 // without binding a port. Takes the metrics registry so /metrics can expose it,
-// the span exporter (nil = export disabled) so handlers emit traces, and an
+// the span exporter (nil = export disabled) so handlers emit traces, an
 // upstream client (nil = count locally, set = forward to it — roadmap #12,
-// client.go) so /count can act as either the edge or the leaf of a trace.
-func newMux(m *metrics, tr *otlpExporter, up *upstreamClient) *http.ServeMux {
-	handler := countHandler
+// client.go) so /count can act as either the edge or the leaf of a trace, and
+// an idempotency store (nil = caching disabled) so a client-retried /count
+// replays the first response instead of counting twice (idempotency.go).
+func newMux(m *metrics, tr *otlpExporter, up *upstreamClient, store *idempotencyStore) *http.ServeMux {
+	handler := countHandlerFunc(store)
 	if up != nil {
 		handler = forwardCountHandler(up)
 	}
@@ -54,20 +58,68 @@ func healthHandler(w http.ResponseWriter, _ *http.Request) {
 	_, _ = w.Write([]byte("ok\n"))
 }
 
-// countHandler counts the request body and returns the tally as JSON.
-func countHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "POST the text to count", http.StatusMethodNotAllowed)
-		return
-	}
-	c, err := count(http.MaxBytesReader(w, r.Body, maxCountBodyBytes))
-	if err != nil {
-		http.Error(w, err.Error(), statusForBodyErr(err))
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(c); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+// idempotencyKeyHeader names the client-supplied header for a retry-safe
+// request — the header name Stripe's API popularized for this pattern.
+const idempotencyKeyHeader = "Idempotency-Key"
+
+// countHandler is the /count handler with idempotency caching disabled —
+// the same behavior as before idempotency.go existed. Kept as a package var
+// (rather than folding callers over to countHandlerFunc(nil)) so existing
+// direct calls in tests didn't need touching.
+var countHandler = countHandlerFunc(nil)
+
+// countHandlerFunc builds the /count handler. store may be nil (caching
+// off); when set and the client sends an Idempotency-Key header, a repeat
+// request with that key and the *same* body replays the cached response
+// instead of counting again — a key reused with a *different* body is a
+// 409, not a silent cache hit (idempotency.go's lookup()).
+func countHandlerFunc(store *idempotencyStore) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "POST the text to count", http.StatusMethodNotAllowed)
+			return
+		}
+
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxCountBodyBytes))
+		if err != nil {
+			http.Error(w, err.Error(), statusForBodyErr(err))
+			return
+		}
+
+		key := r.Header.Get(idempotencyKeyHeader)
+		var bodyHash string
+		if store != nil && key != "" {
+			bodyHash = hashBody(body)
+			if status, cached, ok, lookupErr := store.lookup(key, bodyHash); lookupErr != nil {
+				http.Error(w, lookupErr.Error(), http.StatusConflict)
+				return
+			} else if ok {
+				w.Header().Set("Content-Type", "application/json")
+				w.Header().Set("Idempotency-Replayed", "true")
+				w.WriteHeader(status)
+				_, _ = w.Write(cached)
+				return
+			}
+		}
+
+		c, err := count(bytes.NewReader(body))
+		if err != nil {
+			http.Error(w, err.Error(), statusForBodyErr(err))
+			return
+		}
+
+		var buf bytes.Buffer
+		if err := json.NewEncoder(&buf).Encode(c); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if store != nil && key != "" {
+			store.store(key, bodyHash, http.StatusOK, buf.Bytes())
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(buf.Bytes())
 	}
 }
 
@@ -104,9 +156,11 @@ func serve(addr string) error {
 		slog.Info("forwarding /count upstream", "url", url)
 	}
 
+	store := newIdempotencyStore()
+
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           newMux(m, tr, up),
+		Handler:           newMux(m, tr, up, store),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 
