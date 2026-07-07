@@ -25,7 +25,12 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: latest
+          # Pinned, not "latest" — golangci-lint-action@v6 only documents
+          # compatibility with golangci-lint v1.x (v2 needs action v7+, plus a
+          # .golangci.yml schema migration this repo hasn't done). "latest" had
+          # already drifted onto a v2 release, which v6 doesn't officially
+          # support (notes/ci-cd.md).
+          version: v1.64.8
           working-directory: projects/wordcount
 
   test:
