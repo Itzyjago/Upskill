@@ -2,6 +2,35 @@
 
 A running journal — newest first. One short entry per session.
 
+## 2026-07-07
+- Closed out both remaining "next up" items from the last push.
+- **#17 Testing.** The OTLP export goroutine was only ever tested with
+  `tr=nil` — an escape hatch, not coverage. `middleware_test.go`'s
+  `fakeCollector` wraps `httptest.NewServer` and pushes each decoded payload
+  onto a channel, so a test can wait on the fire-and-forget goroutine
+  deterministically instead of sleeping and racing it. No production code
+  changed — the fix was testing at the HTTP boundary, not adding
+  synchronization machinery to `middleware.go` itself.
+- **#18 System design.** Worked out concretely why wordcount's
+  edge-to-upstream hop is a load-balancer problem, not a queue problem:
+  `/count` is synchronous request/response, so a queue in front of it either
+  blocks the client anyway or forces an API contract change (202 + poll).
+  Multiple upstream replicas behind one address fixes the actual failure
+  modes (SPOF, no spreading) without touching the contract.
+- Also went back and actually fixed something the scratch log had been
+  nagging about since 2026-07-03: `ci.yml` pinned the *action* version but
+  left `golangci-lint` itself on `latest`, which had silently drifted from
+  v1 to v2 — a major version the pinned action doesn't officially support.
+  Pinned to `v1.64.8` and verified it locally before trusting it in CI.
+- What clicked: "give it a real fake" doesn't always mean adding
+  synchronization to production code — sometimes the fake just needs to
+  observe the *boundary* (the HTTP call out) instead of the *internals* (the
+  goroutine), the same way `client_test.go` never needed `upstreamClient` to
+  expose anything extra either.
+- Goal for next time: apply the #18 load-balancer verdict for real — scale
+  the upstream Deployment's replicas and confirm the Service actually
+  spreads `/count` traffic, not just gates rollouts.
+
 ## 2026-07-03
 - Closed both remaining tracing "next up" goals.
 - **#13 Tail sampling.** Both wordcount instances now export to an OTel
