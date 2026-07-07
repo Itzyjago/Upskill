@@ -61,6 +61,42 @@ these are the notes before the code.
   itself to the wrong span, and the waterfall draws a sibling instead of a
   child.
 
+### The actual shape (wordcount's real two-service trace)
+Everything above is the rule; this is what it draws once both wordcount
+instances are running. Three spans, same trace-id, each nested inside the one
+that started it:
+```
+trace-id 4bf92f3577b34da6a3ce929d0e0e4736
+edge   │ SERVER "POST /count"            0ms ═══════════════════════════ 42ms
+       │            │
+       │            └ CLIENT "POST /count (upstream)"
+       │                 3ms ═══════════════════════════════════ 38ms
+       │                        │
+upstrm │                        └ SERVER "POST /count"
+       │                             5ms ═══════════════════ 35ms
+```
+- Three spans, but only **two distinct names** — the edge's inbound span and
+  the upstream's inbound span are both literally `"POST /count"`
+  (`middleware.go` builds the name from `r.Method+" "+path`, and both
+  services register `/count` under the same route). In a real waterfall UI
+  this reads fine because indentation (parent/child depth) disambiguates
+  them, but grepping Jaeger for a span *by name* returns both — the depth is
+  what tells you which service it's from, not the name.
+  `"POST /count (upstream)"` (`client.go`, a literal string, not derived from
+  a route) is the only span name in the trace that's actually unique.
+- The nesting *is* the parent-chain from the section above, drawn: the edge's
+  CLIENT span's `parentID` is the edge SERVER span's id (same-process, no
+  header involved — `withSpan`/`spanFrom` on the Go `context.Context`); the
+  upstream SERVER span's `parentID` is the edge CLIENT span's id (crosses the
+  network via the injected `traceparent` header). One hop is in-process
+  context, the other is the wire — same tree, two different propagation
+  mechanisms stitching it together.
+- The CLIENT span starts a few ms after its parent (encode + dispatch time)
+  and ends a few ms before it (the parent still has response-encoding left to
+  do) — a child span's interval nested *inside* its parent's is what a
+  correct waterfall always looks like; a child span poking outside its
+  parent's bounds is a clock-skew or bug tell.
+
 ## What clicked
 - Propagation is the whole game. Without passing trace context across the call,
   you get disconnected per-service spans, not one trace. The headers are how a
