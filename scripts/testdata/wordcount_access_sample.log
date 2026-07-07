@@ -1,0 +1,6 @@
+{"time":"2026-07-08T01:02:25.8895898+08:00","level":"INFO","msg":"request","method":"POST","path":"/count","status":200,"dur_ms":0,"trace_id":"aa1f5af45ca546392d1890e5d321ad8f","span_id":"e66dc219b3328872"}
+{"time":"2026-07-08T01:02:25.9985545+08:00","level":"INFO","msg":"request","method":"POST","path":"/count","status":200,"dur_ms":0,"trace_id":"5da455d651f6f952272bee5c564bd5cd","span_id":"58b1077c9b3d68f8"}
+{"time":"2026-07-08T01:02:26.0568595+08:00","level":"INFO","msg":"request","method":"POST","path":"/count","status":200,"dur_ms":0,"trace_id":"7069f909f6ecdd021c68833823b4882f","span_id":"8fde56534241c318"}
+{"time":"2026-07-08T01:02:26.1805627+08:00","level":"INFO","msg":"request","method":"POST","path":"/count","status":200,"dur_ms":0,"trace_id":"3aebfc4be82d82eaa540421ca0210d67","span_id":"58c4156f881c20b6"}
+{"time":"2026-07-08T01:02:26.2543327+08:00","level":"INFO","msg":"request","method":"GET","path":"/count","status":405,"dur_ms":0,"trace_id":"41b77ad63997daeac81f3ae847366190","span_id":"ea9725d1c687ff56"}
+{"time":"2026-07-08T01:02:26.3083942+08:00","level":"INFO","msg":"request","method":"GET","path":"/healthz","status":200,"dur_ms":0,"trace_id":"2d7d608d8fe9e910bec833570d60c2c1","span_id":"7fe61d063f3ed600"}
