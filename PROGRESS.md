@@ -2,6 +2,11 @@
 
 A running journal — newest first. One short entry per session.
 
+Checked whether this needed splitting (scratch-log had been nagging about
+it): 230 lines, 10 sessions, still reads fine top to bottom in one sitting.
+Not splitting yet — revisit past ~500 lines or if grepping a specific
+session gets slower than just scrolling.
+
 ## 2026-07-07
 - Closed out both remaining "next up" items from the last push.
 - **#17 Testing.** The OTLP export goroutine was only ever tested with
