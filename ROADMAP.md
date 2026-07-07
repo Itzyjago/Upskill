@@ -16,8 +16,10 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 - 🟡 Shell scripting — bash strict mode, expansion, pipelines
 - 🟢 Algorithms — big-O, search/sort, common patterns
 - 🟡 Linux — processes, signals, permissions, file descriptors
-- 🟡 Regular expressions — groups, lookarounds, greedy vs lazy (and the Go
-  trap: RE2 supports neither)
+- 🟢 Regular expressions — groups, lookarounds, greedy vs lazy, and the Go
+  trap (RE2 rejects lookaround outright) turned into permanent tests:
+  `scripts/regex_lookaround.py` (PCRE side) + `projects/regexcheck` (RE2
+  rejection + the capture-group workaround)
 - 🟢 Make — task running, phony targets, automatic variables, and a real
   three-deep phony chain from `Makefile` (`image -> kind-load -> kind-deploy`)
 
@@ -156,3 +158,8 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     `projects/netcheck` resolves a host and times a raw TCP connect, tested
     with an injected resolver/dialer (no real socket in CI), and run for
     real against `example.com` for actual numbers (`notes/networking.md`).
+24. ✅ Regex: the lookaround examples and the RE2-rejects-them claim were
+    verified once by hand and written down — now permanent tests instead:
+    `scripts/regex_lookaround.py` (PCRE side, Python's `re`) and
+    `projects/regexcheck` (RE2's actual compile-error text, plus the
+    capture-group workaround as real code) (`notes/regex.md`).
