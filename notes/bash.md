@@ -60,3 +60,18 @@ like at first:
   don't wrap the check in `if`/`&&`/`||` at all — let the bare command fail
   and let `-e` do its job; the moment you *do* test it, you've told `-e` you
   own the failure path, on purpose or not.
+- All four claims above are now `scripts/verify_set_e_exemptions.sh` —
+  assertions, not just prose to trust. `scripts/check-scratch-log.sh` is the
+  same discipline applied to something actually useful (warns when
+  `scratch-log.md` needs clearing).
+
+## A real strict-mode bug this session's scripts hit
+Writing those two scripts on Windows surfaced something `set -euo pipefail`
+doesn't protect against at all: line endings. This repo's `.editorconfig`
+declares `end_of_line = lf`, but nothing enforced it at *checkout* — with
+`core.autocrlf=true`, a fresh clone on Windows would silently rewrite the
+committed LF script to CRLF, which breaks `#!/usr/bin/env bash` outright
+(`env` looks for a program literally named `bash\r`). Fixed with
+`.gitattributes` (`* text=auto eol=lf`, plus an explicit `*.sh` rule) —
+found by checking what `git show HEAD:script.sh | xxd` actually contained
+instead of assuming the working copy matched the commit.

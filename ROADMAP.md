@@ -14,7 +14,10 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 - 🟢 Data structures — trees and hash maps, plus a real one traced end to end
   (`metrics.go`'s `map[labelKey]int64` and why `sortedKeys()` exists — map
   iteration order is randomized, not just unspecified)
-- 🟡 Shell scripting — bash strict mode, expansion, pipelines
+- 🟢 Shell scripting — bash strict mode (now real scripts +
+  `verify_set_e_exemptions.sh` pinning the `-e` exemption claims), expansion,
+  pipelines, and a real cross-platform bug found+fixed along the way
+  (missing `.gitattributes` → broken shebang on a Windows checkout)
 - 🟢 Algorithms — big-O, search/sort, common patterns
 - 🟡 Linux — processes, signals, permissions, file descriptors
 - 🟢 Regular expressions — groups, lookarounds, greedy vs lazy, and the Go
