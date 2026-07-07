@@ -8,8 +8,8 @@ import (
 )
 
 func TestCheckSuccess(t *testing.T) {
-	resolve := func(host string) ([]string, error) { return []string{"93.184.216.34"}, nil }
-	dial := func(network, address string, timeout time.Duration) (net.Conn, error) {
+	resolve := func(_ string) ([]string, error) { return []string{"93.184.216.34"}, nil }
+	dial := func(_, _ string, _ time.Duration) (net.Conn, error) {
 		client, server := net.Pipe()
 		_ = server.Close()
 		return client, nil
@@ -27,8 +27,8 @@ func TestCheckSuccess(t *testing.T) {
 
 func TestCheckResolveFailureSkipsDial(t *testing.T) {
 	wantErr := errors.New("no such host")
-	resolve := func(host string) ([]string, error) { return nil, wantErr }
-	dial := func(network, address string, timeout time.Duration) (net.Conn, error) {
+	resolve := func(_ string) ([]string, error) { return nil, wantErr }
+	dial := func(_, _ string, _ time.Duration) (net.Conn, error) {
 		t.Fatal("dial should never run after a resolve failure")
 		return nil, nil
 	}
@@ -41,8 +41,8 @@ func TestCheckResolveFailureSkipsDial(t *testing.T) {
 }
 
 func TestCheckNoAddrsSkipsDial(t *testing.T) {
-	resolve := func(host string) ([]string, error) { return nil, nil }
-	dial := func(network, address string, timeout time.Duration) (net.Conn, error) {
+	resolve := func(_ string) ([]string, error) { return nil, nil }
+	dial := func(_, _ string, _ time.Duration) (net.Conn, error) {
 		t.Fatal("dial should never run with zero resolved addresses")
 		return nil, nil
 	}
@@ -55,9 +55,9 @@ func TestCheckNoAddrsSkipsDial(t *testing.T) {
 }
 
 func TestCheckDialFailure(t *testing.T) {
-	resolve := func(host string) ([]string, error) { return []string{"10.0.0.1"}, nil }
+	resolve := func(_ string) ([]string, error) { return []string{"10.0.0.1"}, nil }
 	wantErr := errors.New("connection refused")
-	dial := func(network, address string, timeout time.Duration) (net.Conn, error) {
+	dial := func(_, _ string, _ time.Duration) (net.Conn, error) {
 		return nil, wantErr
 	}
 

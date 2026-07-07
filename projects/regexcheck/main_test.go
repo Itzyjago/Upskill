@@ -35,6 +35,7 @@ func TestParsePrice(t *testing.T) {
 // regression test instead of prose someone has to trust: RE2 doesn't just
 // handle lookahead differently, it refuses to compile it at all.
 func TestRE2RejectsLookahead(t *testing.T) {
+	//nolint:staticcheck // SA1000: the whole point is that this doesn't compile.
 	_, err := regexp.Compile(`\d+(?= USD)`)
 	if err == nil {
 		t.Fatal("expected a compile error for lookahead syntax, got nil -- did RE2 gain lookahead support?")
@@ -49,6 +50,7 @@ func TestRE2RejectsLookahead(t *testing.T) {
 // missing feature -- worth its own test since the error text differs enough
 // that someone could mistake it for an unrelated bug.
 func TestRE2RejectsLookbehind(t *testing.T) {
+	//nolint:staticcheck // SA1000: the whole point is that this doesn't compile.
 	_, err := regexp.Compile(`(?<=\$)\d+`)
 	if err == nil {
 		t.Fatal("expected a compile error for lookbehind syntax, got nil -- did RE2 gain lookbehind support?")
