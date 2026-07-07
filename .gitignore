@@ -23,3 +23,7 @@ dist/
 build/
 *.tmp
 scratch/
+
+# Go build artifacts
+*.exe
+*.test
