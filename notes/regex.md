@@ -22,7 +22,9 @@ The "without consuming" part is the whole point: a lookaround asserts
 something about the surrounding text but isn't part of the match itself, so
 it doesn't show up in the result and doesn't get consumed as you scan
 forward. Verified each of these against real input, not just written from
-memory:
+memory — and since then, turned into a permanent test
+(`scripts/regex_lookaround.py`, run via `python -m unittest`) instead of a
+one-time manual check that could silently go stale:
 - **Lookahead** `\d+(?= USD)` — digits followed by literal " USD". Against
   `"150 USD"` this matches `150`, not `150 USD`; against `"150 EUR"` it
   doesn't match at all. The " USD" never appears in the captured result —
@@ -39,13 +41,17 @@ memory:
   and an " each" suffix are present, neither of which end up in the match.
 
 ### The trap this repo would actually hit: Go doesn't have any of the above
-All three examples above are JS-flavor (`node`'s regex engine, PCRE-like).
-Go's `regexp` package is **RE2**, and RE2 rejects lookaround syntax outright
-— `regexp.Compile(`\d+(?= USD)`)` fails to compile with `invalid or
-unsupported Perl syntax`, and the lookbehind form fails as an "invalid named
-capture" (RE2 parses `(?<=...)` as an attempt at a *named group* with an
-illegal name, a different error for the same missing feature). This isn't a
-performance opinion, it's a hard guarantee RE2 makes: no
+All three examples above are PCRE-flavor (Python's `re`, verified for real in
+`scripts/regex_lookaround.py`). Go's `regexp` package is **RE2**, and RE2
+rejects lookaround syntax outright — `regexp.Compile(`\d+(?= USD)`)` fails to
+compile with `invalid or unsupported Perl syntax`, and the lookbehind form
+fails as an "invalid named capture" (RE2 parses `(?<=...)` as an attempt at a
+*named group* with an illegal name, a different error for the same missing
+feature). Both of those exact error strings are now pinned by
+`projects/regexcheck`'s `TestRE2RejectsLookahead`/`TestRE2RejectsLookbehind`
+— a future Go release changing RE2's error text or lifting the restriction
+would fail that test, not just leave this paragraph quietly wrong. This
+isn't a performance opinion, it's a hard guarantee RE2 makes: no
 backtracking-dependent construct is allowed, because that's precisely what
 lets a regex engine go exponential on adversarial input (see the ReDoS note
 below) — RE2 trades expressiveness for a linear-time guarantee, full stop.
@@ -55,6 +61,8 @@ below) — RE2 trades expressiveness for a linear-time guarantee, full stop.
   were present. It's more verbose than one clever lookaround, but it's the
   actual answer for wordcount or any other Go code in this repo — reaching
   for a lookaround here is reaching for syntax that doesn't exist.
+  `projects/regexcheck`'s `parsePrice` is this pattern as real, tested code,
+  not just the regex fragment on its own.
 
 ## Gotchas
 - Escape regex metachars in literals: `.` `*` `+` `?` `(` `)` `[` `{` `\` `|` `^` `$`.
