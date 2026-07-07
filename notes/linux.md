@@ -27,3 +27,18 @@
 ## Handy
 - `lsof -i :8080` — what's holding a port. `ss -tlnp` — listening sockets.
 - `df -h` disk, `du -sh *` per-dir size, `free -h` memory.
+
+## What's actually been verified here, and what hasn't
+`scripts/verify_signals_and_jobs.sh` confirmed, for real, against whatever
+shell is actually running: `trap ... TERM` catches a `SIGTERM` sent to a
+backgrounded job, `wait "$pid"` propagates that job's *real* exit status
+(not just "it finished"), and `$!` is a distinct pid, not the shell's own.
+Logged `uname -s` rather than assuming the environment: `MINGW64_NT-...` —
+this is git-bash on Windows (MSYS), not a real Linux kernel. Signals and job
+control happen to work close enough to POSIX here that these checks hold,
+but that's MSYS's emulation, not a kernel guarantee — and the rest of this
+file (`/proc/<pid>/`, `lsof`, setuid/sticky bits, real `ps`/`top`) has no
+Windows equivalent to verify against at all. **Staying 🟡** in the roadmap
+rather than flipping to 🟢 on the strength of a Windows-emulated subset —
+the honest state is "the shell-level parts are solid, the kernel-level parts
+are still just textbook."
