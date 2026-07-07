@@ -63,6 +63,73 @@ func TestCountHandlerRejectsOversizedBody(t *testing.T) {
 	}
 }
 
+func TestCountHandlerReplaysIdempotentRetry(t *testing.T) {
+	store := newIdempotencyStore()
+	handler := countHandlerFunc(store)
+
+	req1 := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader("hello world\n"))
+	req1.Header.Set(idempotencyKeyHeader, "retry-1")
+	rec1 := httptest.NewRecorder()
+	handler(rec1, req1)
+
+	if rec1.Code != http.StatusOK {
+		t.Fatalf("first request status = %d, want %d", rec1.Code, http.StatusOK)
+	}
+	if rec1.Header().Get("Idempotency-Replayed") != "" {
+		t.Error("first request should not be marked as replayed")
+	}
+
+	req2 := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader("hello world\n"))
+	req2.Header.Set(idempotencyKeyHeader, "retry-1")
+	rec2 := httptest.NewRecorder()
+	handler(rec2, req2)
+
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("replayed request status = %d, want %d", rec2.Code, http.StatusOK)
+	}
+	if rec2.Header().Get("Idempotency-Replayed") != "true" {
+		t.Error("replayed request missing Idempotency-Replayed header")
+	}
+	if rec1.Body.String() != rec2.Body.String() {
+		t.Errorf("replayed body = %q, want it to match the original %q", rec2.Body.String(), rec1.Body.String())
+	}
+}
+
+func TestCountHandlerRejectsReusedKeyDifferentBody(t *testing.T) {
+	store := newIdempotencyStore()
+	handler := countHandlerFunc(store)
+
+	req1 := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader("hello\n"))
+	req1.Header.Set(idempotencyKeyHeader, "retry-2")
+	handler(httptest.NewRecorder(), req1)
+
+	req2 := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader("goodbye\n"))
+	req2.Header.Set(idempotencyKeyHeader, "retry-2")
+	rec2 := httptest.NewRecorder()
+	handler(rec2, req2)
+
+	if rec2.Code != http.StatusConflict {
+		t.Errorf("status = %d, want %d for a reused key with a different body", rec2.Code, http.StatusConflict)
+	}
+}
+
+func TestCountHandlerWithoutKeyAlwaysRecounts(t *testing.T) {
+	store := newIdempotencyStore()
+	handler := countHandlerFunc(store)
+
+	for i := 0; i < 2; i++ {
+		req := httptest.NewRequest(http.MethodPost, "/count", strings.NewReader("hello world\n"))
+		rec := httptest.NewRecorder()
+		handler(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("request %d status = %d, want %d", i, rec.Code, http.StatusOK)
+		}
+		if rec.Header().Get("Idempotency-Replayed") != "" {
+			t.Errorf("request %d without a key should never be marked replayed", i)
+		}
+	}
+}
+
 func TestStatusForBodyErr(t *testing.T) {
 	if got := statusForBodyErr(&http.MaxBytesError{Limit: 10}); got != http.StatusRequestEntityTooLarge {
 		t.Errorf("status = %d, want %d for a MaxBytesError", got, http.StatusRequestEntityTooLarge)
