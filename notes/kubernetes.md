@@ -47,6 +47,28 @@ The mental model: you declare desired state; controllers reconcile reality to it
   a percentage *of* — this is the other reason `requests` matter beyond
   scheduling.
 
+### The fuzzy bit, revisited: what actually happens between polls
+Going back over this after `deploy/k8s.yaml`'s HPA had been running a while,
+the part that was fuzzy wasn't metrics-server itself, it was the *timing* —
+`kubectl describe hpa` showing a stable replica count even while load
+visibly changed looked like it was stuck, not working.
+- The HPA controller polls the metrics API on a fixed interval (15s default,
+  cluster-wide, not per-HPA) — it isn't reacting to every scrape, it's
+  sampling. A CPU spike between polls can be invisible for up to that long.
+- `deploy/k8s.yaml`'s HPA sets no `behavior` block, so both directions use the
+  API's defaults — and the two defaults are deliberately asymmetric:
+  scale-**up** has effectively no stabilization window (react fast, a
+  loaded pod needs help now), scale-**down** stabilizes over the **last 5
+  minutes** of recommendations and picks the *highest* replica count seen in
+  that window before shrinking. That asymmetry is the actual answer to "why
+  did it scale up in 30s but take 5 minutes to scale back down" — it's not
+  lag, it's a deliberate anti-flap guard so a brief traffic dip doesn't yank
+  capacity right before the next spike.
+- `minReplicas: 2` means CPU usage below 70% never drops replicas below 2 —
+  the floor isn't a suggestion, `kubectl top pods` idle at ~1% CPU with 2
+  replicas sitting there the whole time is expected, not a sign the HPA gave
+  up.
+
 ## Gotchas
 - `CrashLoopBackOff` → check `logs --previous` and the readiness/liveness config.
 - No `limits` set → noisy-neighbor pods can starve a node.
