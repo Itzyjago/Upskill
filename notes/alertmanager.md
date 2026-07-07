@@ -48,6 +48,37 @@ The leaf of the tree — *where* it goes: `webhook_configs`, `email_configs`,
 denominator: Alertmanager `POST`s a JSON envelope (`status`, `alerts[]`, their
 labels + annotations) to a URL, and anything that speaks HTTP can receive it.
 
+## Revisited: tracing the real tree, not the toy example
+The routing tree above is the textbook shape; going back over the actual
+`alertmanager.yml` in this repo turned up something the textbook version
+doesn't show. Both `webhook-default` and `webhook-oncall` point at the exact
+same URL (`http://alertsink:9094/`) — there's only one sink in this demo
+stack. So routing genuinely happens (Alertmanager picks a different
+*receiver name* per the `severity=page` matcher), but `webhookSink`
+(`webhook.go`) can't tell the two apart: it never sees which receiver
+delivered the payload, only the `severity` label inside it. That means the
+sink's log line proving "the alert made it through routing" is really
+proving the alert fired and got *a* delivery — not proof the routing tree
+picked the receiver it should have. Verifying the tree itself routed
+correctly means looking at Alertmanager's own side (`alertmanager_notifications_total{receiver=...}`
+or its logs), not the payload downstream. Worth remembering generally:
+a receiver fan-in like this (two logical routes, one physical endpoint) is
+exactly the setup where a routing bug can hide — everything downstream still
+"works," it's just silently taking the wrong branch.
+- The `inhibit_rules` block is the other piece that only makes sense read
+  against real labels: `source_matchers: [severity="page"]` /
+  `target_matchers: [severity="warning"]` means *any* firing page suppresses
+  *any* firing warning, repo-wide — there's no `equal:` scoping it to "only
+  suppress warnings for the same alertname/service." Fine with one app in the
+  stack; the first thing to add if a second service joined it, or a real
+  `HighErrorRate` page would silently eat an unrelated warning.
+- `group_wait: 10s` / `group_interval: 1m` / `repeat_interval: 1h` here are
+  tuned short on purpose ("short so the demo notifies quickly," per the
+  config's own comment) — worth not copying these straight into a real
+  routing tree without re-deciding them; the defaults in the textbook example
+  above (30s/5m/4h) are closer to what you'd actually want against a real
+  on-call rotation.
+
 ## What clicked
 - The `for:` window in [alerting.md](alerting.md) is *Prometheus'* anti-flap; the
   `group_*`/`repeat_interval` dials are *Alertmanager's* anti-spam. Two different
