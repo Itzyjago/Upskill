@@ -8,6 +8,20 @@ Building blocks I keep reaching for, and the tradeoffs behind each.
   write-back, cache-aside (lazy load on miss).
 - Watch for **stampede** (many misses at once) → use locks/single-flight or
   jittered TTLs. Watch for stale reads.
+- **This isn't just theory in this repo anymore** — `idempotency.go`
+  (`notes/http.md`) is a real TTL-expiry cache: keyed by `Idempotency-Key`
+  instead of a URL, 5-minute TTL, swept opportunistically on write instead of
+  a background goroutine. It's a narrower case than a general read cache
+  (single-writer-per-key, not "many readers, one writer"), which is exactly
+  why it *doesn't* need single-flight/stampede protection — two concurrent
+  requests with the *same* key racing each other is a client bug (reusing a
+  key for a genuinely concurrent, not sequential-retry, request), not a
+  cache-design problem to solve for.
+- Where a CDN/reverse-proxy cache *would* sit in front of wordcount: nowhere
+  useful today. `/count` is a `POST` (not cacheable by a shared cache
+  without explicit opt-in, `notes/http.md`), and the only `GET` worth
+  mentioning, `/metrics`, must never be cached — a stale scrape is worse than
+  a slow one, it's actively misleading to whoever's alerting on it.
 
 ## Load balancing
 - Spread traffic across instances: round-robin, least-connections, hashing.
