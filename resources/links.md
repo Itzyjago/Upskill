@@ -33,6 +33,15 @@ Curated, not exhaustive — links I've actually found useful.
 - W3C Trace Context Recommendation — the `traceparent`/`tracestate` spec itself
   (short, and the field layout is right there)
 - Jaeger / Grafana Tempo docs — where OTel traces actually land and get viewed
+- "The Illustrated TLS 1.3 Connection" (tls13.xargs.org) — the actual bytes on
+  the wire for a real handshake, not just the flow diagram
+- Kubernetes "Horizontal Pod Autoscaling" concept page — the `behavior`
+  field's default stabilization windows aren't obvious from the walkthrough
+- Go's RE2 syntax reference (`golang.org/s/re2syntax`) — the actual list of
+  what `regexp` supports, which is shorter than PCRE/JS and worth checking
+  before assuming a pattern will compile
+- golangci-lint docs — the config reference, especially useful the moment a
+  `version: latest` pin crosses a major version and the schema changes
 
 ## Practice
 - Exercism — guided exercises with mentor feedback
