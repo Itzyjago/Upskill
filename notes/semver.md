@@ -32,3 +32,22 @@ tags come straight from the git tag.
 ## Practical
 - Tag from a green `main`; never re-point a published tag (consumers cache it).
 - Pair tags with a short CHANGELOG entry so a version means something to a human.
+
+## Checked against the real workflow
+Went back to actually verify these notes against `release.yml` and `git
+tag -l` instead of trusting what I'd written down weeks ago. Two things
+turned up:
+- **No tag has ever been pushed.** `git tag -l` on this repo is empty — the
+  release workflow (`.github/workflows/release.yml`) has never actually run.
+  Everything above about `docker/metadata-action` deriving `1.2.3`/`1.2`/sha
+  tags is correct by reading the config (`type=semver,pattern={{version}}`,
+  `type=semver,pattern={{major}}.{{minor}}`, `type=sha` — matches), but it's
+  unverified in practice. Worth remembering the difference between "the
+  config says this will happen" and "I watched it happen."
+- **The workflow's own comment contradicted these notes.** It said `git tag
+  v0.1.0` — a **lightweight** tag (just a ref, no tagger/message/date) — while
+  this file has said "annotated tag is the source of truth" since it was
+  written. `docker/metadata-action` doesn't actually care which kind you
+  push, so this wasn't a functional bug, just an inconsistency between the
+  advice and the copy-pasteable command sitting right next to it. Fixed the
+  comment to `git tag -a v0.1.0 -m "v0.1.0"` so the two agree.

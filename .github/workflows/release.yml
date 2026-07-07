@@ -1,5 +1,7 @@
 # Build and publish the wordcount image when a semver tag is pushed.
-# Tag with: git tag v0.1.0 && git push origin v0.1.0
+# Tag with: git tag -a v0.1.0 -m "v0.1.0" && git push origin v0.1.0
+# Annotated (-a), not lightweight — see notes/semver.md "checked against the
+# real workflow" for why that distinction is worth keeping consistent.
 name: Release
 
 on:
