@@ -131,12 +131,20 @@ curl -s --data-binary "hello world" localhost:8080/count   # 502 from forwardCou
 ```sh
 go test ./...
 ```
+Every outbound call this codebase makes gets a real fake, not a nil
+escape hatch: `client_test.go` stands up an `httptest.Server` for the
+upstream hop, and `middleware_test.go`'s `fakeCollector` does the same for
+the OTLP export goroutine — pushing each received payload onto a channel so
+a test can wait on a fire-and-forget `go func()` deterministically instead
+of racing it with a sleep (`notes/testing.md`).
 
 ## What I practiced
 - `flag` for CLI parsing and the "no flags → do everything" default.
 - Reading from stdin *or* file args; streaming with `bufio` instead of slurping.
 - Explicit error returns, non-zero exit on failure, errors to stderr.
 - Table-driven tests (see `main_test.go`).
+- Test doubles for both outbound calls (`client_test.go`, `middleware_test.go`)
+  instead of nil-ing the dependency out and only testing the rest of the path.
 
 Then: containerized it (see the `Dockerfile`), added a `-serve` HTTP mode with a
 `/healthz` probe, and a `deploy/` k8s manifest — building toward a real deploy.
