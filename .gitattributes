@@ -1,0 +1,6 @@
+# .editorconfig already declares end_of_line = lf repo-wide, but nothing
+# enforced it at checkout -- core.autocrlf=true on Windows was silently
+# converting committed LF text to CRLF on checkout, which breaks a shell
+# script's shebang line outright. Force LF for text, always.
+* text=auto eol=lf
+*.sh text eol=lf
