@@ -60,6 +60,17 @@ func alertWebhookHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// newWebhookMux wires the webhook sink's routes. Split out from webhookSink,
+// same reason newMux is split from server.go's serve() — so a test can drive
+// the real mux (a real HTTP round trip, not just calling a handler func
+// directly) without binding webhookSink's own fixed addr.
+func newWebhookMux() *http.ServeMux {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/healthz", healthHandler) // reuse the serve-mode probe handler
+	mux.HandleFunc("/", alertWebhookHandler)
+	return mux
+}
+
 // webhookSink runs a tiny HTTP receiver that logs the alerts Alertmanager POSTs
 // to it — the "route an alert somewhere real" half of roadmap #10, reusing this
 // same binary instead of standing up another service. It's not a pager: it's
@@ -68,13 +79,9 @@ func alertWebhookHandler(w http.ResponseWriter, r *http.Request) {
 func webhookSink(addr string) error {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("/healthz", healthHandler) // reuse the serve-mode probe handler
-	mux.HandleFunc("/", alertWebhookHandler)
-
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           mux,
+		Handler:           newWebhookMux(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	slog.Info("webhook sink listening", "addr", addr)
