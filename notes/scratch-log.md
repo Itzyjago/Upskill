@@ -1,2 +1,2 @@
 - random thought: keep a running scratch pad for half-formed ideas before they go into real notes
-- todo: actually apply the load-balancer verdict from #18 — scale deploy/k8s.yaml's upstream replicas and watch kube-proxy spread /count traffic for real, not just reason about it
+- resolved, sort of: the #18 load-balancer verdict (scale deploy/k8s.yaml's upstream, watch kube-proxy spread /count) can't be applied on this machine — no docker/kind/kubectl here, checked 2026-07-08. Left ⛔ blocked-on-tooling in ROADMAP.md instead of faking a ✅. Re-attempt on a machine that actually has the cluster tooling.
