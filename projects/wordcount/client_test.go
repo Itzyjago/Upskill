@@ -71,6 +71,27 @@ func TestUpstreamClientErrorsOnUpstreamFailure(t *testing.T) {
 	}
 }
 
+// TestUpstreamClientCapsOversizedResponse is the other half of the security
+// audit: count() used to json.NewDecoder(resp.Body) the upstream's response
+// with no cap — a compromised or misbehaving upstream could exhaust the
+// caller the same way an uncapped inbound request body could
+// (notes/security.md "reuse elsewhere"). A response bigger than
+// maxCountBodyBytes must fail instead of being read in full.
+func TestUpstreamClientCapsOversizedResponse(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Valid JSON shape so the failure comes from the size cap truncating
+		// mid-stream, not from some unrelated syntax error.
+		_, _ = w.Write([]byte(`{"lines":1,"words":2,"bytes":` +
+			strings.Repeat("9", maxCountBodyBytes+1) + `}`))
+	}))
+	defer upstream.Close()
+
+	u := newUpstreamClient(upstream.URL, nil)
+	if _, err := u.count(context.Background(), []byte("hi")); err == nil {
+		t.Error("want an error when the upstream response exceeds maxCountBodyBytes")
+	}
+}
+
 func TestForwardCountHandlerReturnsUpstreamTally(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_ = json.NewEncoder(w).Encode(counts{Lines: 0, Words: 2, Bytes: 11})

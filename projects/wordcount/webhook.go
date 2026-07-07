@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"log/slog"
 	"net/http"
 	"os"
@@ -20,6 +21,45 @@ type alertNotification struct {
 	} `json:"alerts"`
 }
 
+// alertWebhookHandler logs the alerts Alertmanager POSTs to it. Split out from
+// webhookSink, same reason newMux is split from main.go's serve mode: so a
+// test can exercise it directly (httptest.NewRecorder) without binding a port.
+func alertWebhookHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "POST Alertmanager webhook payloads here", http.StatusMethodNotAllowed)
+		return
+	}
+	// Same cap as countHandler/forwardCountHandler (notes/security.md) — this
+	// endpoint faces Alertmanager, not the public internet, but an unbounded
+	// read is unbounded regardless of who's supposed to be on the other end.
+	// Read fully *before* decoding rather than wiring json.NewDecoder straight
+	// onto MaxBytesReader: whether a mid-decode cap trip still satisfies
+	// errors.As(err, *http.MaxBytesError) depends on exactly where in the
+	// JSON it trips (verified — it doesn't always), so statusForBodyErr needs
+	// the read's own error, not whatever the decoder reshapes it into.
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxCountBodyBytes))
+	if err != nil {
+		http.Error(w, err.Error(), statusForBodyErr(err))
+		return
+	}
+	var n alertNotification
+	if err := json.Unmarshal(body, &n); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	for _, a := range n.Alerts {
+		// status flips to "resolved" when the alert clears (send_resolved).
+		slog.Info("alert received",
+			"group_status", n.Status,
+			"status", a.Status,
+			"alertname", a.Labels["alertname"],
+			"severity", a.Labels["severity"],
+			"summary", a.Annotations["summary"],
+		)
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 // webhookSink runs a tiny HTTP receiver that logs the alerts Alertmanager POSTs
 // to it — the "route an alert somewhere real" half of roadmap #10, reusing this
 // same binary instead of standing up another service. It's not a pager: it's
@@ -30,28 +70,7 @@ func webhookSink(addr string) error {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", healthHandler) // reuse the serve-mode probe handler
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			http.Error(w, "POST Alertmanager webhook payloads here", http.StatusMethodNotAllowed)
-			return
-		}
-		var n alertNotification
-		if err := json.NewDecoder(r.Body).Decode(&n); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		for _, a := range n.Alerts {
-			// status flips to "resolved" when the alert clears (send_resolved).
-			slog.Info("alert received",
-				"group_status", n.Status,
-				"status", a.Status,
-				"alertname", a.Labels["alertname"],
-				"severity", a.Labels["severity"],
-				"summary", a.Annotations["summary"],
-			)
-		}
-		w.WriteHeader(http.StatusOK)
-	})
+	mux.HandleFunc("/", alertWebhookHandler)
 
 	srv := &http.Server{
 		Addr:              addr,

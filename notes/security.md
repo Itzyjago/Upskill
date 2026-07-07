@@ -47,6 +47,39 @@ Defensive basics for app developers — the stuff that actually bites.
   unbounded" is the actual vulnerability, HTTP bodies are just the most common
   door it walks in through.
 
+## Reuse audit: is the fix actually everywhere?
+`countHandler`/`forwardCountHandler` got the `MaxBytesReader` fix (above);
+went back and actually `grep`ed the whole codebase for every other place a
+body gets read, instead of assuming the pattern had propagated. It hadn't —
+two more unbounded reads turned up, and they're the two directions the
+`/count` fix doesn't cover:
+- **`webhook.go`'s alert sink** — `alertWebhookHandler` decoded Alertmanager's
+  POST body with no cap at all. Same bug, same fix, one detail worth keeping:
+  it was originally wired as `json.NewDecoder(MaxBytesReader(...)).Decode()`
+  directly, and testing that turned up that `errors.As(err,
+  *http.MaxBytesError)` **doesn't reliably survive going through
+  `json.Decoder`** — whether the cap trip reaches the caller as a
+  `*MaxBytesError` or gets reshaped into a `SyntaxError` first depends on
+  exactly where in the JSON the cutoff lands (verified both ways). Switched to
+  `io.ReadAll(MaxBytesReader(...))` first, `json.Unmarshal` the resulting
+  bytes second — the same two-step split `countHandler` already used, now
+  understood as load-bearing rather than incidental.
+- **`client.go`'s upstream response** — `upstreamClient.count` decoded the
+  *upstream's* response with no cap either. Easy to miss because it's not
+  "untrusted user input" in the usual sense — it's the mirror case: a
+  compromised or just-buggy upstream can exhaust the *caller* the same way a
+  hostile client can exhaust a server. `http.MaxBytesReader` doesn't apply
+  here (it needs a `ResponseWriter` to signal the trip to, which only exists
+  server-side); `io.LimitReader(resp.Body, cap)` is the client-side
+  equivalent — no distinct error type, it just truncates, which surfaces
+  naturally as a JSON decode error either way.
+- **The actual lesson**: "apply the same fix everywhere" isn't a checklist
+  item, it's a search — the two misses here weren't in the code that was
+  already being looked at when the original bug was fixed, they were in
+  adjacent files nobody re-audited. Both are now covered by tests
+  (`TestAlertWebhookHandlerRejectsOversizedBody`,
+  `TestUpstreamClientCapsOversizedResponse`) instead of just inspection.
+
 ## Mindset
 - Validate input at the boundary; treat all external data as hostile.
 - Fail closed (deny on error), log security events, don't leak details in errors.

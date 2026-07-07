@@ -54,9 +54,20 @@ func (u *upstreamClient) count(ctx context.Context, body []byte) (counts, error)
 		if resp.StatusCode/100 != 2 {
 			err = fmt.Errorf("upstream returned %s", resp.Status)
 			failed = true
-		} else if decErr := json.NewDecoder(resp.Body).Decode(&c); decErr != nil {
-			err = decErr
-			failed = true
+		} else {
+			// Cap the upstream's response the same way countHandler caps an
+			// inbound one (notes/security.md) — an unbounded Decode here is
+			// the same resource-exhaustion shape, just facing the other
+			// direction: a compromised or misbehaving upstream instead of a
+			// hostile client. http.MaxBytesReader needs a ResponseWriter to
+			// signal the cap trip to, which only makes sense server-side;
+			// io.LimitReader is the client-side equivalent — it just silently
+			// truncates, which surfaces here as a Decode error either way.
+			decErr := json.NewDecoder(io.LimitReader(resp.Body, maxCountBodyBytes)).Decode(&c)
+			if decErr != nil {
+				err = decErr
+				failed = true
+			}
 		}
 	}
 	s = s.finish(time.Now(), failed)
