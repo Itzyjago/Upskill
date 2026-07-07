@@ -1,3 +1,4 @@
 - random thought: keep a running scratch pad for half-formed ideas before they go into real notes
 - todo: actually apply the load-balancer verdict from #18 — scale deploy/k8s.yaml's upstream replicas and watch kube-proxy spread /count traffic for real, not just reason about it
 - random thought: the otel-collector is a new SPOF per otlp.md's "in practice" section — same load-balancer question as #18, one hop later, never actually worked through
+- reminder: webhookSink's own ListenAndServe wiring is still untested — alertWebhookHandler is now, the mux/server plumbing around it isn't
