@@ -82,3 +82,10 @@ for f in Path("notes").glob("*.md"):
 - `.glob()` and `.rglob()` (recursive) beat `os.walk()` for anything that's
   fundamentally "find files matching a pattern" — one call instead of a
   triple-nested loop over `(dirpath, dirnames, filenames)`.
+
+## Stdlib fluency, applied: `scripts/parse_access_log.py`
+Past isolated snippets — a real script parsing wordcount's structured JSON
+logs, stdlib only (`json`, `dataclasses`, `pathlib`, `argparse`,
+`statistics`, `collections.defaultdict`). Tested against a *real* captured
+log (`scripts/testdata/`), not synthetic fixtures — `unittest` catches a
+regression the same way `go test` does elsewhere in this repo.

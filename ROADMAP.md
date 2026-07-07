@@ -4,7 +4,8 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 
 ## Languages
 - 🟢 JavaScript / TypeScript — async, modules, the type system
-- 🟡 Python — stdlib fluency, packaging, virtualenvs
+- 🟢 Python — stdlib fluency (applied in `scripts/parse_access_log.py`),
+  packaging, virtualenvs
 - 🟢 Go — concurrency, context cancellation, built a small CLI
 
 ## Foundations
