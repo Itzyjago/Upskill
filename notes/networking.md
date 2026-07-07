@@ -20,6 +20,15 @@
 - Records: `A`/`AAAA` (IP), `CNAME` (alias), `MX` (mail), `TXT` (verification),
   `NS` (delegation).
 - TTL controls caching — low TTL before a migration, raise it after.
+- Verified DNS + the TCP open together instead of trusting the bullet
+  points above: `projects/netcheck` resolves a host and times a raw connect.
+  Against `example.com` it returned two `A` records
+  (`104.20.23.154`, `172.66.147.243` — Cloudflare-fronted, which is why
+  there are two, not one) and a TCP connect in ~3-5ms on both port 80 and
+  443 from this machine. A bogus hostname failed exactly the way
+  `net.LookupHost`'s error text says it should: `"no such host"`, no TCP
+  attempt at all — confirmed by the tool's own logic (`check()` returns
+  early on a resolve error) rather than assumed.
 
 ## TLS handshake (1.3)
 - ClientHello (offers ciphers + key share) → ServerHello + certificate →
