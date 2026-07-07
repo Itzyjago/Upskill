@@ -82,6 +82,24 @@ to keep — but *when* you decide matters as much as *how many*.
   wordcount currently does neither — it exports 100% of spans, which is really
   "sample rate 1" head sampling, the trivial case.
 
+### In practice: what the tradeoff costs (`otel-collector.yaml`)
+The numbers make the tradeoff concrete instead of abstract:
+- `decision_wait: 10s` — every trace sits in the collector's memory for up to
+  10 seconds before the policies run. That's the *actual* cost of tail
+  sampling: not CPU, but a per-trace hold buffer sized by (traffic rate ×
+  10s). Head sampling pays none of this — the decision is a hash, made and
+  forgotten instantly.
+- The `errors` and `slow` (>500ms) policies are why tail sampling is worth
+  that memory here at all: they guarantee the exact traces head sampling
+  would drop at the same rate as everything else. `baseline` (10%) is the
+  head-sampling-shaped fallback for the rest — proof the two aren't mutually
+  exclusive, tail sampling *contains* a head-style rate as its last policy.
+- The real tradeoff isn't "head vs. tail" in the abstract, it's "can you
+  afford a stateful buffering hop." A single collector instance is a new
+  potential bottleneck/SPOF in the trace pipeline — the same load-balancer
+  reasoning as `notes/system-design.md`'s wordcount case study applies to
+  scaling *this* past one collector instance too.
+
 ## What clicked
 - The `traceId`/`spanId`/`parentSpanId` in the OTLP payload are *literally* the
   ids `trace.go` already mints for the `traceparent`. The header was always

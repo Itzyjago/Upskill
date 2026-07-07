@@ -1,7 +1,9 @@
 # OpenTelemetry Collector config — sits between wordcount and Jaeger so tail
 # sampling can look at a *whole* trace (every span from both services) before
 # deciding to keep or drop it. See notes/otlp.md "Sampling: head vs. tail" and
-# roadmap #13. Not wired into the app yet — that's the next commit.
+# roadmap #13. Wired into both wordcount instances via
+# OTEL_EXPORTER_OTLP_ENDPOINT in docker-compose.yml — traffic flows
+# app -> otel-collector -> jaeger, not app -> jaeger directly.
 receivers:
   otlp:
     protocols:
