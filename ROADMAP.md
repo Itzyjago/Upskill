@@ -98,11 +98,11 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     caps it at 10MB, `statusForBodyErr` turns a tripped cap into a `413`
     instead of a generic `400` (`notes/security.md`).
 
-### Next up
-17. Testing: the OTLP export goroutine (`middleware.go`) is currently
-    untestable — `otlpExporter` is just nil'd out in every test, an escape
-    hatch, not a double (`notes/testing.md` "the fake-collector-shaped hole").
-    Give it a real fake and assert export actually happens.
+17. ✅ Testing: the OTLP export goroutine (`middleware.go`) was untestable —
+    `otlpExporter` was just nil'd out in every test, an escape hatch, not a
+    double. `middleware_test.go`'s `fakeCollector` (an `httptest.Server` that
+    signals a channel on receipt) now asserts export actually happens, no
+    production code changed (`notes/testing.md`).
 18. System design: write up how wordcount would actually scale past one
     edge + one upstream — a queue in front of the forward hop, or a real load
     balancer instead of a single hardcoded `WORDCOUNT_UPSTREAM_URL`. Still
