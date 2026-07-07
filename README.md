@@ -18,7 +18,8 @@ of re-Googling the same thing every few weeks.
 | `notes/scratch-log.md` | Half-formed ideas and "come back to this" reminders that haven't earned a real note yet |
 | `resources/` | Curated links worth keeping |
 | `PROGRESS.md` | A running log of what I learned and when |
-| `projects/` | Things built to make the notes stick, not just read about — `wordcount` (a Go CLI-turned-service with a real Prometheus/Grafana/Jaeger stack behind it) |
+| `projects/` | Things built to make the notes stick, not just read about — `wordcount` (a Go CLI-turned-service with a real Prometheus/Grafana/Jaeger stack behind it), `netcheck` (DNS + TCP verification), `regexcheck` (RE2-vs-lookaround, pinned as tests) |
+| `scripts/` | Standalone stdlib/bash utilities that turn a note's claim into something that fails loudly if it stops being true |
 
 ## How I use it
 
