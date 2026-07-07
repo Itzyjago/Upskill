@@ -2,3 +2,4 @@
 - todo: actually apply the load-balancer verdict from #18 — scale deploy/k8s.yaml's upstream replicas and watch kube-proxy spread /count traffic for real, not just reason about it
 - random thought: the otel-collector is a new SPOF per otlp.md's "in practice" section — same load-balancer question as #18, one hop later, never actually worked through
 - reminder: webhookSink's own ListenAndServe wiring is still untested — alertWebhookHandler is now, the mux/server plumbing around it isn't
+- misc: golangci-lint v2 migration (action v7+, .golangci.yml schema change) is still just a comment in ci.yml, not actually done
