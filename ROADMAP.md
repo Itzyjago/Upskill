@@ -22,8 +22,11 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
   three-deep phony chain from `Makefile` (`image -> kind-load -> kind-deploy`)
 
 ## Web / APIs
-- 🟡 HTTP & REST — methods, status codes, idempotency, caching
-- 🟡 Networking — TCP/UDP, DNS, the TLS handshake
+- 🟢 HTTP & REST — methods, status codes, idempotency (a real
+  `Idempotency-Key` store wired into `/count`, `idempotency.go`), and why
+  `ETag`/`304` caching doesn't fit a `POST` in the first place
+- 🟢 Networking — TCP/UDP, DNS, the TLS handshake, and `projects/netcheck`
+  verifying DNS + the TCP open against a real host instead of trusting prose
 
 ## Platform / DevOps
 - 🟢 Docker — images vs containers, multi-stage builds (containerized the CLI)
@@ -119,11 +122,16 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     one address doesn't (`notes/system-design.md`).
 
 ### Next up
-19. Actually apply the load-balancer verdict from #18 — `deploy/k8s.yaml`'s
-    upstream is still one Service backing one Deployment; scale replicas and
-    confirm the Service's built-in load balancing (kube-proxy) spreads
-    `/count` traffic across pods, not just liveness/readiness gating a
-    rollout.
+19. ⛔ **Blocked on tooling, not skipped.** Actually apply the load-balancer
+    verdict from #18 — `deploy/k8s.yaml`'s upstream is still one Service
+    backing one Deployment; scale replicas and confirm the Service's built-in
+    load balancing (kube-proxy) spreads `/count` traffic across pods, not
+    just liveness/readiness gating a rollout. This machine has no
+    Docker/kind/kubectl (checked 2026-07-08: `go`/`python`/`node` resolve,
+    those three don't), so there's no cluster here to actually watch
+    kube-proxy spread traffic — marking this ✅ without that would be
+    exactly the "assume it's fine" failure mode the scratch log exists to
+    catch. Stays open until it runs on a machine that has the tooling.
 20. ✅ Data structures: was 🟡 "revisit trees and hash maps" with nothing to
     show for it — turned out this repo already had a real hash map doing
     work (`metrics.go`'s `map[labelKey]int64`), including a live example of
@@ -135,3 +143,16 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     `upstreamClient` has no retry logic yet, which is exactly why adding one
     later needs an `Idempotency-Key` design up front, not bolted on after a
     double-counted metric shows up (`notes/http.md`).
+
+### Next up
+22. ✅ Built the `Idempotency-Key` design #21 said would be needed —
+    `idempotency.go` is a real in-memory store wired into `/count`
+    (`countHandlerFunc`): same key + same body replays the cached response,
+    same key + different body is a `409`. Applied at the client-facing hop
+    only; wiring it into `forwardCountHandler` waits for `upstreamClient` to
+    actually grow retry logic, per #21's own rule about not bolting this on
+    speculatively (`notes/http.md`).
+23. ✅ Networking: DNS/TCP were prose with nothing behind them —
+    `projects/netcheck` resolves a host and times a raw TCP connect, tested
+    with an injected resolver/dialer (no real socket in CI), and run for
+    real against `example.com` for actual numbers (`notes/networking.md`).
