@@ -31,7 +31,7 @@ for _, tt := range tests {
 - **Fake** is a working lightweight impl (in-memory DB). Prefer fakes over deep
   mock chains — mocks couple tests to call structure.
 
-## The fake-collector-shaped hole (wordcount)
+## The fake-collector-shaped hole (wordcount) — closed
 Two different answers to "how do I test code that calls an external
 collector?" sit side by side in `projects/wordcount`, and only one of them is
 a real double:
@@ -58,6 +58,15 @@ a real double:
   giving `metrics`/`otlpExporter` a way to synchronize, which nothing here
   does yet. Nil-as-escape-hatch was the path of least resistance, not a
   deliberate design choice — worth coming back to.
+- **Resolution**: turned out the synchronization didn't need to live in
+  production code at all — `middleware_test.go`'s `fakeCollector` wraps
+  `httptest.NewServer` and pushes each decoded payload onto a buffered
+  channel; the test just receives off that channel with a bounded
+  `time.After` instead of sleeping. The goroutine in `middleware.go` is
+  untouched — the fake observes it from the outside, the same way
+  `client_test.go` observes `upstreamClient` from the outside. Escape hatch
+  → fake didn't require adding a synchronization *feature*, just testing at
+  the boundary (the HTTP call) instead of the internals (the goroutine).
 
 ## Coverage & discipline
 - Coverage shows what's *unexecuted*, not what's *correct*. 100% ≠ bug-free.
