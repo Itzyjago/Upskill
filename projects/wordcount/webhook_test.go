@@ -74,7 +74,7 @@ func TestWebhookMuxRoutesOverARealConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("GET /healthz: %v", err)
 	}
-	defer healthResp.Body.Close()
+	defer func() { _ = healthResp.Body.Close() }()
 	if healthResp.StatusCode != http.StatusOK {
 		t.Errorf("/healthz status = %d, want %d", healthResp.StatusCode, http.StatusOK)
 	}
@@ -84,7 +84,7 @@ func TestWebhookMuxRoutesOverARealConnection(t *testing.T) {
 	if err != nil {
 		t.Fatalf("POST /: %v", err)
 	}
-	defer alertResp.Body.Close()
+	defer func() { _ = alertResp.Body.Close() }()
 	if alertResp.StatusCode != http.StatusOK {
 		t.Errorf("POST / status = %d, want %d", alertResp.StatusCode, http.StatusOK)
 	}

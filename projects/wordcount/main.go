@@ -116,7 +116,7 @@ func main() {
 			continue
 		}
 		c, err := count(f)
-		f.Close()
+		_ = f.Close()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "wc:", err)
 			exit = 1

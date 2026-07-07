@@ -48,3 +48,38 @@ separate piece of work, not a one-line fix.
   "whatever the tool maintainers shipped this week." Pin CI tooling the same
   way you pin dependencies — a reproducible build includes the linter, not
   just the code.
+
+## Follow-up: actually did the v2 migration
+The v1 pin above was deliberately the smaller, safer fix — this is the
+"bigger, separate piece of work" it deferred, done properly instead of left
+as a comment:
+- **Config**: `.golangci.yml` gets `version: "2"` at the top, `formatters:`
+  becomes its own top-level section (`gofmt`/`goimports` move out of
+  `linters.enable`), and `linters.default: none` has to be set explicitly —
+  v2 defaults to a "standard" bundle if you don't, which would silently
+  enable linters this config never asked for. `run.timeout` and
+  `issues.max-issues-per-linter`/`max-same-issues` are unchanged.
+- **Action**: bumped `golangci-lint-action` to `v9` (the current release;
+  its own docs confirm v2 support starting around v7) and the `version:`
+  input to `v2.12.2`, matching what got verified locally.
+- **Verified before trusting it, same as the v1 pin**: installed
+  `golangci-lint/v2` (note the `/v2` module path — that's how a Go module
+  signals a major version bump past v1) locally and ran it against the real
+  config. First run surfaced 5 genuinely new findings the v1.64.8 binary
+  never caught — 3 `errcheck` (unchecked `Close()` calls, two of them in
+  this session's own new test code) and 2 `staticcheck` quickfixes. This is
+  the exact "a version bump surfaces more than expected" problem from the
+  top of this section, playing out again in miniature, except this time
+  caught locally before it ever touched CI.
+- **The De Morgan quickfix (QF1001) taught its own lesson**: staticcheck
+  flagged `!((c>='0'&&c<='9') || (c>='a'&&c<='f'))` and suggested
+  `!A && !B`. Applying it literally left the linter *still* unhappy — each
+  negated range comparison inside the AND is itself a `!(range)` shape the
+  same rule matches, so chasing it to a true fixed-point would have expanded
+  into `(c<'0'||c>'9') && (c<'a'||c>'f')`, which is worse to read than the
+  original, not better. The actual fix wasn't a mechanical rewrite at all:
+  flip the condition to a positive check with `continue` for the valid case
+  and `return false` for everything else — no top-level negation left for
+  the rule to match, and it reads better than either negated form
+  (`trace.go`'s `isLowerHex`). Not every quickfix is worth chasing to
+  completion; sometimes the fix is restructuring past the pattern entirely.

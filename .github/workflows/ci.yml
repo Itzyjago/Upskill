@@ -23,14 +23,14 @@ jobs:
           go-version: "1.22"
           cache-dependency-path: projects/wordcount/go.mod
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
-          # Pinned, not "latest" — golangci-lint-action@v6 only documents
-          # compatibility with golangci-lint v1.x (v2 needs action v7+, plus a
-          # .golangci.yml schema migration this repo hasn't done). "latest" had
-          # already drifted onto a v2 release, which v6 doesn't officially
-          # support (notes/ci-cd.md).
-          version: v1.64.8
+          # v1 -> v2 migration done (notes/ci-cd.md): action bumped to a
+          # release that documents v2 support, golangci-lint itself pinned
+          # to the exact version verified locally, and .golangci.yml carries
+          # the matching v2 schema (version: "2", formatters split out of
+          # linters). Still pinned, not "latest" — same reason as before.
+          version: v2.12.2
           working-directory: projects/wordcount
 
   test:

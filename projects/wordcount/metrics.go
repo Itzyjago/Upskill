@@ -96,7 +96,7 @@ func (m *metrics) render() string {
 
 	var b strings.Builder
 	p := func(format string, args ...any) {
-		_, _ = b.WriteString(fmt.Sprintf(format, args...))
+		_, _ = fmt.Fprintf(&b, format, args...)
 	}
 
 	p("# HELP http_requests_total Total HTTP requests handled.\n")

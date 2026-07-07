@@ -1,19 +1,30 @@
 # golangci-lint config for wordcount — a small, opinionated linter set.
 # Run locally with `make lint`; CI runs the same thing.
+#
+# v2 schema (migrated from v1 — see notes/ci-cd.md): gofmt/goimports moved
+# out of `linters.enable` into their own `formatters` section, and
+# `linters.default: none` is now required to start from an empty set instead
+# of v2's new default "standard" bundle.
+version: "2"
+
 run:
   timeout: 2m
 
 linters:
+  default: none
   enable:
     - errcheck      # unchecked errors are the #1 Go footgun
     - govet         # suspicious constructs
     - staticcheck   # the big one — correctness + simplifications
     - ineffassign   # assignments that are never used
     - unused        # dead code
-    - gofmt         # formatting
-    - goimports     # import grouping/ordering
     - misspell      # typos in comments and strings
     - revive        # style, replaces the old golint
+
+formatters:
+  enable:
+    - gofmt         # formatting
+    - goimports     # import grouping/ordering
 
 issues:
   # Be strict on a learning project — surface everything.

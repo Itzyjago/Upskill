@@ -96,9 +96,10 @@ func isLowerHex(s string) bool {
 	}
 	for i := 0; i < len(s); i++ {
 		c := s[i]
-		if !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')) {
-			return false
+		if (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') {
+			continue // valid lowercase hex digit
 		}
+		return false
 	}
 	return true
 }
