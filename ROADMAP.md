@@ -115,11 +115,14 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     confirm the Service's built-in load balancing (kube-proxy) spreads
     `/count` traffic across pods, not just liveness/readiness gating a
     rollout.
-20. Data structures: the roadmap has said 🟡 "revisit trees and hash maps"
-    for two weeks without a revisit. Pick one real use in wordcount or a
-    kata and stop letting it sit.
-21. HTTP: idempotency notes are still abstract — `/count` is a POST with no
-    idempotency key; work out what an idempotent version of it would even
-    look like (probably: none, it's a pure function of the body) versus
-    `forwardCountHandler`'s retries, which *aren't* currently safe to retry
-    blindly on a network error (could double-count upstream-side metrics).
+20. ✅ Data structures: was 🟡 "revisit trees and hash maps" with nothing to
+    show for it — turned out this repo already had a real hash map doing
+    work (`metrics.go`'s `map[labelKey]int64`), including a live example of
+    "unordered by design" (`sortedKeys()` exists because map iteration order
+    is randomized, not just unspecified) — `notes/data-structures.md`.
+21. ✅ HTTP: idempotency notes were abstract — worked `/count` through for
+    real. Its *response* is idempotent (pure function of the body); its
+    *metrics* aren't (every call increments counters, retry or not); and
+    `upstreamClient` has no retry logic yet, which is exactly why adding one
+    later needs an `Idempotency-Key` design up front, not bolted on after a
+    double-counted metric shows up (`notes/http.md`).
