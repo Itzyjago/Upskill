@@ -7,6 +7,55 @@ it): 230 lines, 10 sessions, still reads fine top to bottom in one sitting.
 Not splitting yet — revisit past ~500 lines or if grepping a specific
 session gets slower than just scrolling.
 
+## 2026-07-08
+First session on a machine without Docker/kind/kubectl (only `go`/`python`/
+`node` resolve) — checked before assuming anything, and it reshaped the
+session: #19 (kube-proxy load-spreading) went ⛔ blocked-on-tooling in
+ROADMAP.md instead of a faked ✅, and the rest of the work leaned into what
+*is* real and verifiable here.
+- **HTTP.** Tried `ETag`/`If-None-Match` on `/count` first — doesn't fit,
+  it's a `POST` and there's no `GET` worth caching in this service.
+  Pivoted to what `/count` actually needed: `idempotency.go`, a real
+  `Idempotency-Key` store closing the loop #21 left open. Verified live
+  end-to-end, not just by unit test — ran `wc -serve`, hit it with curl
+  twice with the same key, got `Idempotency-Replayed: true` and an
+  identical body back on the retry.
+- **Networking & Regex.** Both were prose with nothing durable behind them.
+  `projects/netcheck` resolves a host and times a TCP connect for real
+  (numbers now in `notes/networking.md`, not guesses). `projects/regexcheck`
+  + `scripts/regex_lookaround.py` turn the RE2-rejects-lookaround claim into
+  actual tests instead of a one-time manual check that could go stale.
+- **Python.** `scripts/parse_access_log.py` — stdlib only, summarizes
+  wordcount's structured logs by route. Tested against a *real* captured
+  log, including that live idempotency-key replay, not synthetic fixtures.
+- **Bash.** `verify_set_e_exemptions.sh` turns bash.md's four `-e`-exemption
+  claims into assertions. Writing it surfaced a real bug along the way: no
+  `.gitattributes` meant a fresh Windows checkout would silently rewrite
+  committed LF scripts to CRLF, breaking the shebang outright. Fixed, then
+  found the same CRLF issue was already failing `gofmt` on four existing
+  wordcount files in *this* working tree — not a git problem, a checkout
+  timing one, fixed locally.
+- **Linux.** `verify_signals_and_jobs.sh` confirmed trap/wait/`$!` behavior
+  against whatever shell is actually running — logged `uname -s` instead of
+  assuming: MSYS on Windows, not real Linux. Left 🟡 on purpose; the
+  kernel-level parts of this file (`/proc`, `lsof`, setuid) have nothing on
+  Windows to verify against, and a partial pass isn't a green checkmark.
+- **CI.** netcheck and regexcheck existed with zero CI coverage until
+  `golangci-lint run` got pointed at them for the first time — found 8 real
+  `revive` findings (unused test-fake params) and 2 legitimate `staticcheck`
+  flags on the intentionally-invalid regex literals (nolint'd with why).
+  CI matrixed over all three modules instead of just wordcount.
+- What clicked: "the tool isn't here" turned into more real work, not less
+  — checking what's actually available before starting (instead of assuming
+  parity with whatever machine the earlier k8s/Docker sessions ran on)
+  is the same "go back and actually check" instinct as everything else in
+  this log, just applied to the environment itself instead of a claim in
+  a note.
+- Goal for next time: wire `idempotencyStore` into `forwardCountHandler`
+  once `upstreamClient` actually grows retry logic (not before — see
+  http.md's own rule about that), and re-attempt #19 on a machine with
+  Docker/kind/kubectl.
+
 ## 2026-07-07
 - Closed out both remaining "next up" items from the last push.
 - **#17 Testing.** The OTLP export goroutine was only ever tested with
