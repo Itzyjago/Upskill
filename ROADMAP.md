@@ -10,12 +10,16 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 ## Foundations
 - 🟢 Git — branching, rebase, recovering from mistakes
 - 🟢 SQL — joins, indexes, query planning
-- 🟡 Data structures — revisit trees and hash maps
+- 🟢 Data structures — trees and hash maps, plus a real one traced end to end
+  (`metrics.go`'s `map[labelKey]int64` and why `sortedKeys()` exists — map
+  iteration order is randomized, not just unspecified)
 - 🟡 Shell scripting — bash strict mode, expansion, pipelines
 - 🟢 Algorithms — big-O, search/sort, common patterns
 - 🟡 Linux — processes, signals, permissions, file descriptors
-- 🟡 Regular expressions — groups, lookarounds, greedy vs lazy
-- 🟡 Make — task running, phony targets, automatic variables
+- 🟡 Regular expressions — groups, lookarounds, greedy vs lazy (and the Go
+  trap: RE2 supports neither)
+- 🟢 Make — task running, phony targets, automatic variables, and a real
+  three-deep phony chain from `Makefile` (`image -> kind-load -> kind-deploy`)
 
 ## Web / APIs
 - 🟡 HTTP & REST — methods, status codes, idempotency, caching
@@ -46,11 +50,16 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
   always kept, 10% baseline) before spans reach Jaeger
 
 ## Cross-cutting
-- 🟡 Testing — the pyramid, table-driven tests, doubles
-- 🟡 Security — injection, authz, secrets, OWASP basics; applied one of these
-  for real (capped an unbounded request body — resource exhaustion), rest is
-  still just notes
-- 🟡 System design — caching, load balancing, queues, scaling
+- 🟢 Testing — the pyramid, table-driven tests, and real doubles: an
+  `httptest`-backed fake for both outbound calls this repo makes
+  (`upstreamClient` and, now, the OTLP collector via `middleware_test.go`'s
+  `fakeCollector`) instead of nil-ing dependencies out
+- 🟢 Security — injection, authz, secrets, OWASP basics, resource exhaustion;
+  applied for real three times now (the original `/count` body cap, plus a
+  follow-up audit that found and fixed the same unbounded-read bug in
+  `webhook.go` and `client.go`'s upstream response, each covered by a test)
+- 🟡 System design — caching, load balancing, queues, scaling; worked
+  wordcount's own scaling story through concretely (`notes/system-design.md`)
 
 ## Next up
 1. ✅ Containerize one small project end to end → `projects/wordcount` (Dockerfile).
