@@ -22,6 +22,14 @@
 ## Caching
 - `Cache-Control: max-age=...` for freshness; `ETag` + `If-None-Match` for
   cheap revalidation (server replies `304`, no body).
+- Both of those are keyed by URL and only apply to safe/cacheable methods
+  (`GET`/`HEAD`) by default — a shared or private cache doesn't store a
+  `POST` response unless the response explicitly says it's cacheable
+  (RFC 9111 §3). Tried to bolt `ETag`/`304` onto wordcount's `/count` first;
+  it doesn't fit — `/count` is a `POST`, and there's no `GET` in this service
+  worth caching (`/healthz` is trivially cheap, `/metrics` *must* stay live
+  or it stops being monitoring). The caching problem `/count` actually has is
+  below, and it isn't a `Cache-Control` problem at all.
 
 ## Idempotency, worked through on a real endpoint (wordcount's `/count`)
 The roadmap flagged this as still abstract — `/count` is a `POST` with no
@@ -54,11 +62,25 @@ guessing:
   different legitimate requests can share identical text); a real fix would
   need a client-generated `Idempotency-Key` header the upstream can dedupe
   server-side by key, not by content.
-- **Verdict**: `/count` doesn't need an `Idempotency-Key` today because it
-  has no retry path yet and no state to corrupt. It would need one the
-  moment `upstreamClient` grows retries — and the design for that key has to
-  exist *before* the retry logic does, not be bolted on after a duplicate
-  shows up in a Grafana panel.
+- **Verdict, original**: `/count` doesn't need an `Idempotency-Key` today
+  because it has no retry path yet and no state to corrupt. It would need
+  one the moment `upstreamClient` grows retries — and the design for that
+  key has to exist *before* the retry logic does, not be bolted on after a
+  duplicate shows up in a Grafana panel.
+- **Follow-up: built the design instead of just describing it.**
+  `idempotency.go` is a real `map[key]->(bodyHash, status, body, expiry)`
+  store wired into `countHandlerFunc` (`server.go`): a client that sends
+  `Idempotency-Key` and retries with the *same* body gets the cached
+  response back (`Idempotency-Replayed: true`, no re-count); the same key
+  with a *different* body is a `409`, not a guess about which body was
+  "real." No key at all — the default today — behaves exactly as before.
+  This only covers the **client-facing** hop. The scenario the original
+  entry actually worried about — `upstreamClient` retrying the edge→upstream
+  call — is still open: `client.go` has no retry logic yet, so there's
+  nothing generating a duplicate key to forward. Wiring `idempotencyStore`
+  into `forwardCountHandler` is the next step, *when* that retry logic
+  actually gets added — not before, per the original verdict's own rule
+  about not bolting this on speculatively.
 
 ## REST design
 - URLs are nouns (`/users/42/orders`), HTTP methods are the verbs.
