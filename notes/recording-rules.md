@@ -53,6 +53,33 @@ groups:
   one definition of "p95 latency" instead of drifting apart — a real footgun
   when the two copies of the PromQL diverge.
 
+## Practice: writing one from scratch
+Reading `recording.yml`'s three existing rules is one thing; writing a new
+one against a real gap is the actual test. The gap: all three existing rules
+aggregate `by (le)` only — dropping `path` — so the dashboard's p95 panel
+answers "is *something* slow" but not "*which route*." Wrote
+`path:http_request_duration_seconds:p95_5m` to fix that:
+```yaml
+- record: path:http_request_duration_seconds:p95_5m
+  expr: |
+    histogram_quantile(0.95,
+      sum(rate(http_request_duration_seconds_bucket[5m])) by (path, le))
+```
+- Naming: `level:metric:operations` still applies, the level just changed
+  from `job` (one number, everything collapsed) to `path` (one number per
+  route) — the convention doesn't say which labels to keep, just that
+  whatever you kept goes first.
+- The one new-to-me part: `le` has to survive the `by()` clause alongside
+  `path`, not instead of it — `histogram_quantile` needs `le` present to find
+  the bucket boundaries; drop it and the function has nothing to interpolate
+  across. Adding a label to a recording rule's `by()` almost always means
+  *adding* to the existing set, not swapping.
+- Didn't add one for `http_requests_in_flight` — it's a plain gauge already,
+  no `rate()`/`histogram_quantile()` to precompute. A recording rule that
+  just re-stores an existing value one-to-one isn't precomputing anything,
+  it's a second copy of the same number — the "when not to use them" section
+  above, applied for real instead of just stated.
+
 ## What clicked
 - It's the classic compute trade: **do the work once, ahead of time, and read it
   cheap**, vs. recomputing on every read. Same instinct as a materialized view in

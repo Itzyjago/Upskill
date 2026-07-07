@@ -24,3 +24,12 @@ groups:
         expr: |
           histogram_quantile(0.95,
             sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+
+      # Latency, broken out per route — written from scratch as practice
+      # (notes/recording-rules.md). The all-routes p95 above hides which
+      # specific route is slow; keeping `path` in the by() alongside `le`
+      # answers "which route" instead of just "something is slow somewhere."
+      - record: path:http_request_duration_seconds:p95_5m
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(http_request_duration_seconds_bucket[5m])) by (path, le))
