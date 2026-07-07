@@ -100,6 +100,37 @@ The numbers make the tradeoff concrete instead of abstract:
   reasoning as `notes/system-design.md`'s wordcount case study applies to
   scaling *this* past one collector instance too.
 
+### Actually working through it: a plain load balancer doesn't work here
+Left that as a "same reasoning applies" hand-wave; it doesn't, and the
+reason is worth writing down because it's the interesting part. wordcount's
+`/count` is **stateless per request** — any replica can answer any request,
+so round-robin behind a Service is the whole fix (`notes/system-design.md`).
+The collector's `tail_sampling` processor is **stateful per trace**: it
+holds every span of a trace in memory until `decision_wait` elapses, then
+decides on the *whole trace* at once. Put a plain load balancer in front of
+multiple collector replicas and it round-robins **individual spans**, not
+traces — the edge span and the upstream span of the same wordcount trace
+could land on two different collector instances, and neither one ever sees
+the whole trace to make a correct keep/drop call.
+- **The actual fix**: a two-tier collector architecture. A stateless tier of
+  collectors runs the `loadbalancing` exporter, which hashes each span's
+  **trace ID** (not round-robin) to consistently pick which backend
+  collector gets it — every span of a given trace, regardless of which
+  wordcount instance or which stateless-tier collector it first hit, gets
+  routed to the *same* stateful-tier collector. That backend tier is the one
+  actually running `tail_sampling`, now safe to scale horizontally because
+  each instance only ever needs the traces its hash consistently assigned it.
+- **Why this is worth contrasting with #18, not just repeating it**: same
+  symptom (one instance is a SPOF, want to scale horizontally), different
+  fix, because the two things being scaled have different statefulness. A
+  load balancer alone is the right tool exactly when the unit of work
+  (a request) is independent of every other unit of work; the moment
+  "correctness" requires related units (spans of one trace) to land in the
+  same place, scaling needs a routing *key*, not just a spread-traffic
+  policy. Worth remembering as the general shape, not just an OTel fact:
+  "can I just load-balance this?" depends on whether the thing has state
+  that spans more than one request.
+
 ## What clicked
 - The `traceId`/`spanId`/`parentSpanId` in the OTLP payload are *literally* the
   ids `trace.go` already mints for the `traceparent`. The header was always
