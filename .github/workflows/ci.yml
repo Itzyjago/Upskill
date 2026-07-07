@@ -1,52 +1,76 @@
-# CI for the wordcount project — the roadmap "real pipeline" goal.
-# lint → test → build, cheapest job first so failures surface fast.
+# CI for every Go module under projects/ — the roadmap "real pipeline" goal,
+# matrixed once netcheck and regexcheck existed too instead of silently only
+# ever covering wordcount. lint → test, cheapest job first so failures
+# surface fast. build/smoke-test stays wordcount-only — it's the only module
+# that produces a binary meant to run as anything (netcheck/regexcheck are
+# `go run` tools and test subjects, not services).
 name: CI
 
 on:
   push:
     branches: [main]
-    paths: ["projects/wordcount/**", ".github/workflows/ci.yml"]
+    paths:
+      [
+        "projects/wordcount/**",
+        "projects/netcheck/**",
+        "projects/regexcheck/**",
+        ".github/workflows/ci.yml",
+      ]
   pull_request:
-    paths: ["projects/wordcount/**", ".github/workflows/ci.yml"]
-
-defaults:
-  run:
-    working-directory: projects/wordcount
+    paths:
+      [
+        "projects/wordcount/**",
+        "projects/netcheck/**",
+        "projects/regexcheck/**",
+        ".github/workflows/ci.yml",
+      ]
 
 jobs:
   lint:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [wordcount, netcheck, regexcheck]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-          cache-dependency-path: projects/wordcount/go.mod
+          cache-dependency-path: projects/${{ matrix.module }}/go.mod
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
           # v1 -> v2 migration done (notes/ci-cd.md): action bumped to a
           # release that documents v2 support, golangci-lint itself pinned
-          # to the exact version verified locally, and .golangci.yml carries
-          # the matching v2 schema (version: "2", formatters split out of
-          # linters). Still pinned, not "latest" — same reason as before.
+          # to the exact version verified locally, and each module's
+          # .golangci.yml carries the matching v2 schema. Still pinned, not
+          # "latest" — same reason as before.
           version: v2.12.2
-          working-directory: projects/wordcount
+          working-directory: projects/${{ matrix.module }}
 
   test:
     runs-on: ubuntu-latest
     needs: lint
+    strategy:
+      matrix:
+        module: [wordcount, netcheck, regexcheck]
+    defaults:
+      run:
+        working-directory: projects/${{ matrix.module }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22"
-          cache-dependency-path: projects/wordcount/go.mod
+          cache-dependency-path: projects/${{ matrix.module }}/go.mod
       - run: go test -race -cover ./...
 
   build:
     runs-on: ubuntu-latest
     needs: test
+    defaults:
+      run:
+        working-directory: projects/wordcount
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
