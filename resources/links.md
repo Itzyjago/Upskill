@@ -42,6 +42,13 @@ Curated, not exhaustive — links I've actually found useful.
   before assuming a pattern will compile
 - golangci-lint docs — the config reference, especially useful the moment a
   `version: latest` pin crosses a major version and the schema changes
+- RFC 9111 (HTTP Caching) §3 "Storing Responses in Caches" — the actual rule
+  for why a shared/private cache doesn't store a `POST` response by default,
+  not just "caching is a GET thing"
+- Stripe API docs, "Idempotent Requests" — the `Idempotency-Key` pattern
+  `idempotency.go` mirrors, including the reused-key-different-body conflict
+- Go `net` package docs — `LookupHost`/`DialTimeout` signatures, used as-is
+  in `netcheck` instead of guessed from memory
 
 ## Practice
 - Exercism — guided exercises with mentor feedback
