@@ -146,3 +146,9 @@
   a.proj-row:hover .name{ color: var(--accent); }
 
   /* ---------- principles ---------- */
+  .principles{ display:grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+  @media (max-width: 760px){ .principles{ grid-template-columns: 1fr; } }
+  .principle h3{ font-size: 15.5px; margin: 0 0 8px; }
+  .principle p{ font-size: 14.5px; color: var(--muted); line-height:1.55; margin:0; }
+
+  /* ---------- footer ---------- */
