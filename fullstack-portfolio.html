@@ -115,3 +115,9 @@
   .chip{
     font-size: 12.5px; padding: 4px 10px; border-radius: 6px; background: var(--surface-2); color: var(--ink);
   }
+  @media (max-width: 640px){
+    .layer{ grid-template-columns: 1fr; gap: 6px; padding: 14px 16px 16px; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .layer.pulse::before{ animation: none; background: var(--accent); opacity:.5; }
+    html{ scroll-behavior: auto; }
