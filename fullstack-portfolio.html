@@ -103,3 +103,9 @@
     margin-bottom: 10px; position: relative; overflow: hidden;
   }
   .layer::before{
+    content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background: var(--line);
+  }
+  .layer.pulse::before{ animation: pulse 3.6s ease-in-out infinite; animation-delay: calc(var(--i) * .45s); }
+  @keyframes pulse{
+    0%, 100%{ background: var(--line); }
+    30%{ background: var(--accent); }
