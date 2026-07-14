@@ -59,6 +59,15 @@ session gets slower than just scrolling.
   under a 500-element stress case, not just a handful of inserts). One
   `gofmt` slip on a comment got caught and fixed as its own small commit
   rather than folded in quietly.
+- Closed out with subsets (power set via include/exclude backtracking),
+  integer square root via binary search, run-length encode/decode, and
+  in-place array rotation. The isqrt test's first hand-picked large-input
+  expected value was just wrong (bad mental arithmetic — caught by
+  computing it independently with Python before trusting it, not by the
+  test failing after the fact). The rotate-array test hit the same
+  `reflect.DeepEqual(nil, []int{})` gotcha counting sort's test hit
+  earlier this same session — worth actually remembering now, not just
+  fixing twice. A second small `gofmt` slip got its own fix commit too.
 - Goal for next time: nothing queued from this session — pick the next
   thin spot off the roadmap, or revisit #19 if a machine with
   Docker/kind/kubectl becomes available.
