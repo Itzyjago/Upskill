@@ -25,6 +25,40 @@ session gets slower than just scrolling.
   false positives would mean the test picked too small a sample).
 - Ran `gofmt -l` and `go vet` clean across the whole package before calling
   any of it done.
+- **Later the same session**: kept going past the initial batch, same
+  bar (own test file, `go test` passing, `gofmt`/`go vet` clean, one real
+  commit per unit) — Kruskal's MST and Bellman-Ford (cross-checked against
+  Dijkstra on overlapping cases), longest common subsequence + edit
+  distance, quickselect (cross-checked against `sort.Ints`), counting
+  sort, interval merging, a fixed-capacity ring buffer, reservoir sampling
+  (Algorithm R, checked for roughly-uniform selection over 20k trials, not
+  just correct output size), a generic doubly linked deque, a token-bucket
+  rate limiter (injectable clock, no real sleeps in the tests — same
+  boundary-fake approach as wordcount's `httptest` doubles), a segment
+  tree (exhaustively cross-checked against a naive sum over every
+  sub-range), Kadane's max subarray and Boyer-Moore majority vote (both
+  cross-checked against brute-force/recount references — majority vote's
+  test data was wrong on the first pass, a 9-element input that didn't
+  actually have a majority element, and the independent-recount check
+  caught it), an LFU cache, an AVL tree (verified height stays within an
+  O(log n) bound after 100 sorted inserts, where a plain BST would
+  degrade to a list), longest increasing subsequence (patience-sort
+  version, cross-checked against a brute-force reference), number theory
+  helpers (GCD/LCM, Sieve of Eratosthenes cross-checked against trial
+  division, modular exponentiation), coin change and word-break DP, valid
+  parentheses (reusing the earlier Stack), longest palindromic substring,
+  Floyd's cycle detection + middle-of-list, in-place matrix rotation,
+  group anagrams, permutation and N-Queens backtracking (N-Queens checked
+  against OEIS A000170's known solution counts, not just internal
+  consistency), BST level-order traversal + height (reusing the earlier
+  Queue), merge-k-sorted-lists over `container/heap`, a consistent-hash
+  ring (checked that adding a node remaps a minority of keys, not all of
+  them — the actual point of consistent hashing over `hash % n`), a
+  from-scratch hash map (chaining + grow/rehash at a 0.75 load factor), A*
+  grid pathfinding, BST lowest common ancestor, and a skip list (checked
+  under a 500-element stress case, not just a handful of inserts). One
+  `gofmt` slip on a comment got caught and fixed as its own small commit
+  rather than folded in quietly.
 - Goal for next time: nothing queued from this session — pick the next
   thin spot off the roadmap, or revisit #19 if a machine with
   Docker/kind/kubectl becomes available.

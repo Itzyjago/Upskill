@@ -171,10 +171,22 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
 ### Next up
 25. ✅ Algorithms: the notes covered big-O and search/sort in prose, but
     unlike every other topic here, had no project artifact. `projects/algo`
-    is a small Go module with a real, `go test`-verified implementation of
-    each: binary/merge/quick sort, singly linked list, generic stack/queue,
-    a BST, a binary min-heap, a directed graph (BFS/DFS + topo sort +
-    cycle detection), union-find, an LRU cache, a trie, Dijkstra
-    (`container/heap`), memoized/tabulated Fibonacci, 0/1 knapsack, KMP
-    substring search (cross-checked against a naive scan), sliding-window
-    maximum, a Fenwick tree, two-sum, and a bloom filter.
+    is a Go module with a real, `go test`-verified implementation of each:
+    binary/merge/quick sort, singly linked list, generic stack/queue, a
+    BST + AVL tree, a binary min-heap, a directed graph (BFS/DFS + topo
+    sort + cycle detection), union-find, Kruskal's MST, Bellman-Ford,
+    Dijkstra and A* (`container/heap`), an LRU + LFU cache, a trie, a skip
+    list, a segment tree and a Fenwick tree, a consistent-hash ring, a
+    from-scratch hash map, memoized/tabulated Fibonacci, 0/1 knapsack,
+    coin change, word break, longest common subsequence + edit distance,
+    longest increasing subsequence, Kadane's max subarray, KMP substring
+    search, sliding-window maximum, a token-bucket rate limiter, two-sum,
+    a bloom filter, reservoir sampling, a ring buffer and a generic deque,
+    number theory helpers (GCD/LCM/sieve/modpow), permutations and
+    N-Queens backtracking, matrix rotation, group anagrams, valid
+    parentheses, longest palindromic substring, Floyd's cycle detection,
+    BST level-order traversal + lowest common ancestor, and
+    merge-k-sorted-lists. Every implementation has its own test file and
+    was verified with `go test` (several cross-checked against a brute
+    force / independent reference rather than hand-picked expected values)
+    before being committed.
