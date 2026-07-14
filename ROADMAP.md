@@ -167,3 +167,14 @@ Status legend: `🟢 solid` · `🟡 in progress` · `⚪ not started`
     `scripts/regex_lookaround.py` (PCRE side, Python's `re`) and
     `projects/regexcheck` (RE2's actual compile-error text, plus the
     capture-group workaround as real code) (`notes/regex.md`).
+
+### Next up
+25. ✅ Algorithms: the notes covered big-O and search/sort in prose, but
+    unlike every other topic here, had no project artifact. `projects/algo`
+    is a small Go module with a real, `go test`-verified implementation of
+    each: binary/merge/quick sort, singly linked list, generic stack/queue,
+    a BST, a binary min-heap, a directed graph (BFS/DFS + topo sort +
+    cycle detection), union-find, an LRU cache, a trie, Dijkstra
+    (`container/heap`), memoized/tabulated Fibonacci, 0/1 knapsack, KMP
+    substring search (cross-checked against a naive scan), sliding-window
+    maximum, a Fenwick tree, two-sum, and a bloom filter.

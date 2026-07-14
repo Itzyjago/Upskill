@@ -7,6 +7,28 @@ it): 230 lines, 10 sessions, still reads fine top to bottom in one sitting.
 Not splitting yet — revisit past ~500 lines or if grepping a specific
 session gets slower than just scrolling.
 
+## 2026-07-14
+- **#25 Algorithms.** Every other roadmap topic had a project artifact
+  except this one — notes only. Built `projects/algo`, a new Go module, one
+  implementation + test file per data structure/algorithm, each committed
+  separately and `go test`-verified as it landed rather than in one batch
+  at the end: binary/merge/quicksort, a singly linked list (iterative
+  reverse), a generic stack and queue, a BST, a binary min-heap, a directed
+  graph (BFS, DFS, topo sort with cycle detection, run repeatedly under
+  `-count=5` since map iteration order isn't stable), union-find, an O(1)
+  LRU cache, a trie, Dijkstra over `container/heap`, Fibonacci
+  memoized-vs-tabulated, 0/1 knapsack, KMP (cross-checked against a naive
+  scan, not just fixed expected output), sliding-window maximum, a Fenwick
+  tree (cross-checked against a naive prefix sum), two-sum, and a bloom
+  filter (asserts no false negatives, and that false positives stay rare
+  rather than asserting zero, since a probabilistic structure with zero
+  false positives would mean the test picked too small a sample).
+- Ran `gofmt -l` and `go vet` clean across the whole package before calling
+  any of it done.
+- Goal for next time: nothing queued from this session — pick the next
+  thin spot off the roadmap, or revisit #19 if a machine with
+  Docker/kind/kubectl becomes available.
+
 ## 2026-07-08
 First session on a machine without Docker/kind/kubectl (only `go`/`python`/
 `node` resolve) — checked before assuming anything, and it reshaped the
