@@ -12,7 +12,7 @@ func TestRotateArray(t *testing.T) {
 		want []int
 	}{
 		{[]int{1, 2, 3, 4, 5, 6, 7}, 3, []int{5, 6, 7, 1, 2, 3, 4}},
-		{[]int{1, 2}, 3, []int{2, 1}},   // k > len(nums)
+		{[]int{1, 2}, 3, []int{2, 1}}, // k > len(nums)
 		{[]int{1, 2, 3}, 0, []int{1, 2, 3}},
 	}
 	for _, c := range cases {
